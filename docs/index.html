@@ -1,509 +1,270 @@
-<!DOCTYPE html>
-<html lang="es">
+<!doctype html>
+<html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>TP2 · Demostrador de vehículo conectado sobre LTE privada</title>
-<meta name="description" content="Laboratorio de cuatro máquinas físicas que sostiene un vehículo conectado sobre una red 4G LTE privada con SDR, control centralizado en el EPC e inferencia YOLO26 ofloadada a Jetson Orin Nano. Taller de Proyectos II, Máster en Ingeniería de Telecomunicación, Universidad de Valladolid." />
-<meta name="theme-color" content="#14181c" />
-<link rel="stylesheet" href="./site.css" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connected vehicle on a private LTE network</title>
+<meta name="description" content="A connected-vehicle demonstrator on a private 4G LTE network built with SDR, traffic-sign detection at the edge, and a deployment study for the A-601 motorway.">
+<meta name="theme-color" content="#09090b">
+<style>
+:root{--bg:#09090b;--fg:#e4e4e7;--muted:#8b8b94;--faint:#5b5b64;--rule:#232329;--card:#111114;--accent:#9ecbff;--good:#7fdc9c;--warn:#e5c07b;--bad:#e08a8a}
+*{box-sizing:border-box}
+html{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg)}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+main{width:min(100% - 2.5rem,62rem);margin:0 auto;padding:3rem 0 4rem}
+header.top{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:baseline;font-size:.9rem;color:var(--muted);margin-bottom:2.5rem}
+header.top nav{display:flex;gap:1rem;flex-wrap:wrap}header.top nav a{color:var(--muted)}header.top nav a:hover{color:var(--fg);text-decoration:none}
+h1{font-size:2rem;line-height:1.15;letter-spacing:-.02em;font-weight:600;margin:0 0 .75rem;max-width:34ch;text-wrap:balance}
+.lede{font-size:1.1rem;color:var(--fg);max-width:60ch;margin:0 0 1.5rem;text-wrap:pretty}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(22rem,1fr));gap:0 2.5rem;font-size:.9rem;margin:0 0 3rem}
+.facts div{display:grid;grid-template-columns:8rem 1fr;gap:1rem;padding:.45rem 0;border-top:1px solid var(--rule)}.facts span:first-child{color:var(--muted)}.facts span:last-child{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.8rem;color:var(--fg)}
+h2{font-size:1.2rem;font-weight:600;margin:3rem 0 .5rem;letter-spacing:-.01em}
+h3{font-size:1rem;font-weight:600;margin:1.75rem 0 .4rem}
+p{margin:0 0 .9rem;color:var(--muted);max-width:68ch;text-wrap:pretty}p.fg{color:var(--fg)}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:.5rem 0 1rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .75rem .45rem 0;border-top:1px solid var(--rule)}thead th{border-top:0;color:var(--muted);font-weight:500;font-size:.82rem}td.n,th.n{text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem;white-space:nowrap}
+td:first-child{color:var(--fg)}td{color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(10rem,1fr));gap:1rem;margin:1rem 0 1.5rem}
+.kpi{border-top:1px solid var(--rule);padding-top:.6rem;font-size:.85rem;color:var(--muted)}.kpi b{display:block;font-size:1.7rem;font-weight:600;letter-spacing:-.02em;color:var(--fg);line-height:1.1;margin-bottom:.3rem}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem 2.5rem}@media(max-width:44rem){.cols{grid-template-columns:1fr}}
+.cols div{font-size:.92rem;color:var(--muted);text-wrap:pretty}.cols b{color:var(--fg);font-weight:500}
+figure{margin:1rem 0 1.5rem}figcaption{font-size:.82rem;color:var(--faint);margin-top:.4rem}
+svg.chart{width:100%;height:auto;display:block;font-family:inherit}
+.arch{border:1px solid var(--rule);border-radius:12px;background:radial-gradient(ellipse at 50% 30%,#121216,#09090b 70%);padding:.5rem}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem}
+.video{position:relative;aspect-ratio:16/9;border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:#000;margin:1rem 0}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.video button{position:absolute;inset:0;width:100%;height:100%;background:#000 url(assets/readme/demo.webp) center/cover no-repeat;color:#fff;border:0;font:inherit;cursor:pointer;text-shadow:0 1px 8px #000}
+.video button span{display:inline-block;padding:.6rem 1rem;border:1px solid rgba(255,255,255,.6);border-radius:999px;background:rgba(0,0,0,.45)}
+.video button:hover span{background:rgba(0,0,0,.7)}
+ol.steps{padding-left:1.2rem;color:var(--muted);font-size:.92rem}ol.steps li{margin:.35rem 0}ol.steps b{color:var(--fg);font-weight:500}
+footer{margin-top:4rem;padding-top:1rem;border-top:1px solid var(--rule);font-size:.85rem;color:var(--faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+.tag{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78rem;color:var(--faint)}
+</style>
 </head>
 <body>
-
-<a class="visually-hidden" href="#main" style="position:absolute;left:-9999px;">Saltar al contenido</a>
-
-<nav class="bar" aria-label="Principal">
-  <div class="wrap">
-    <a class="brand" href="./index.html">
-      <span class="mark" aria-hidden="true"></span>
-      TP2<span class="label">· Grupo 4 · 2025–2026</span>
-    </a>
-    <button class="menu-toggle" aria-expanded="false" aria-controls="nav-list" type="button">Menú</button>
-    <ul id="nav-list">
-      <li><a href="#sistema">Sistema</a></li>
-      <li><a href="#evidencia">Evidencia</a></li>
-      <li><a href="#servicios">Servicios</a></li>
-      <li><a href="#equipo">Equipo</a></li>
-      <li><a href="./dashboard.html">Dashboard A-601</a></li>
-      <li><a href="./coverage.html">Cobertura</a></li>
-      <li><a href="./demo.html" aria-current="false">Demostración</a></li>
-    </ul>
-  </div>
-</nav>
-
-<header class="hero" id="main">
-  <div class="wrap">
-    <div class="hero-row">
-      <div>
-        <div class="ribbon">
-          <span class="pill"><span class="num">2025</span>—<span class="num">2026</span> · Curso</span>
-          <span class="pill">A-601 · <span class="num">km 0–104</span></span>
-          <span class="pill">Banda <span class="num">7</span> · FDD 10 MHz</span>
-          <span class="status"><span class="dot" aria-hidden="true"></span>Lab operativo</span>
-        </div>
-
-        <h1>
-          Demostrador real de <em>vehículo conectado</em><br/>
-          sobre una red 4G LTE privada construida con SDR.
-        </h1>
-
-        <p class="lede subtitle">
-          Cuatro máquinas físicas trabajando en concierto. Toda la lógica de decisión vive en
-          el núcleo de la red, no en el coche. La inferencia es un servicio aislado consumido por
-          el EPC. La radio queda acotada al eNodeB. El vehículo es un cliente delgado.
-        </p>
-
-        <div class="cta-row">
-          <a class="btn" href="./demo.html"><span>Ver la demostración</span><span class="arrow" aria-hidden="true">→</span></a>
-          <a class="btn ghost" href="#sistema">Arquitectura</a>
-          <a class="btn ghost" href="./dashboard.html">Tráfico A-601</a>
-          <a class="btn ghost" href="./coverage.html">Cobertura RF</a>
-        </div>
-      </div>
-
-      <aside aria-label="Ficha técnica">
-        <dl class="hero-meta">
-          <div class="row"><dt>Asignatura</dt><dd>Taller de Proyectos II</dd></div>
-          <div class="row"><dt>Titulación</dt><dd>Máster Ing. Telecomunicación</dd></div>
-          <div class="row"><dt>Centro</dt><dd>ETSIT · UVa</dd></div>
-          <div class="row"><dt>UL · DL</dt><dd>2540–2550 / 2660–2670 MHz</dd></div>
-          <div class="row"><dt>Cesión espectro</dt><dd>Vodafone S.A.U. (contrato académico)</dd></div>
-          <div class="row"><dt>Detector visual</dt><dd>YOLO26 X · TP2-G4-2026</dd></div>
-          <div class="row"><dt>Subred UE</dt><dd>172.16.0.0/24</dd></div>
-        </dl>
-      </aside>
-    </div>
-  </div>
+<main>
+<header class="top">
+  <span>Connected vehicle · private LTE</span>
+  <nav><a href="#network">network</a><a href="#vision">vision</a><a href="#control">control</a><a href="#demo">demo</a><a href="#traffic">traffic</a><a href="#coverage">coverage</a><a href="https://github.com/asandova-ui/connected-vehicle-private-lte">code</a></nav>
 </header>
 
-<!-- ─────────────── BLOQUE 1 · SISTEMA ─────────────── -->
-<section class="block" id="sistema">
-  <div class="wrap">
-    <div class="block-head">
-      <div>
-        <span class="eyebrow"><span class="ord">01.</span>Sistema</span>
-        <h2>Cuatro nodos, una sola decisión</h2>
-      </div>
-      <p class="lede">
-        El plano de control es unidireccional. El coche captura, ejecuta y obedece.
-        El EPC orquesta, decide y ordena. El eNodeB transporta radio. La Jetson resuelve
-        inferencia bajo contrato. No hay backend monolítico ni base de datos persistente
-        en el camino crítico, sólo scripts en el EPC que sostienen UDP con el coche y
-        HTTP con la Jetson.
-      </p>
-    </div>
+<h1>A connected vehicle on a private LTE network, and what it would take to run it on a motorway.</h1>
+<p class="lede">Four machines: a 4G core, an eNodeB on software radio, a car as user equipment, and an inference node. The car captures and obeys; the core decides. Then the same service planned for the A-601 between Valladolid and Segovia: traffic, radio coverage, cost and licensing.</p>
+<div class="facts">
+  <div><span>Course</span><span>Taller de Proyectos 2 · MSc Telecom. Eng. · UVa</span></div>
+  <div><span>Spectrum</span><span>LTE band 7 · 2540–2550 / 2660–2670 MHz · 10 MHz FDD</span></div>
+  <div><span>Radio</span><span>srsRAN 4G · bladeRF 2.0 xA9 · MIMO 2×2 TM4</span></div>
+  <div><span>Detector</span><span>YOLO · 4,985 images · mAP@50 95.5 %</span></div>
+  <div><span>Vehicle</span><span>AWS DeepRacer · camera · LiDAR · BMI160 IMU</span></div>
+  <div><span>Deployment study</span><span>A-601 km 0–104 · 25 sites · 50 sectors</span></div>
+</div>
 
-    <div class="arch" aria-label="Diagrama de arquitectura del sistema TP2">
-      <svg viewBox="0 0 960 320" xmlns="http://www.w3.org/2000/svg" role="img">
-        <defs>
-          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M0,0 L10,5 L0,10 z" fill="#14181c"/>
-          </marker>
-          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M0,0 L10,5 L0,10 z" fill="#486b3a"/>
-          </marker>
-        </defs>
+<h2 id="network">Network</h2>
+<p>srsRAN 4G end to end. The EPC (MME, HSS, SPGW) runs on one machine and hands UEs addresses in 172.16.0.0/24; the eNodeB runs <span class="mono">srsenb</span> on a bladeRF on a second machine and does nothing but radio. The car attaches through an LTE modem; the Jetson is reached from the core over HTTP. No database and no monolith in the critical path: UDP between car and core, HTTP between core and inference.</p>
 
-        <g font-family="IBM Plex Mono, monospace" font-size="11" fill="#14181c">
-          <!-- Coche -->
-          <rect x="20" y="110" width="170" height="100" fill="#f4f3ee" stroke="#14181c" stroke-width="1.5"/>
-          <text x="105" y="138" text-anchor="middle" font-size="11" font-weight="600">COCHE · UE LTE</text>
-          <text x="105" y="158" text-anchor="middle" fill="#5d5e58">DeepRacer · agente</text>
-          <text x="105" y="178" text-anchor="middle" fill="#5d5e58">cámara · LiDAR · IMU</text>
-          <text x="105" y="198" text-anchor="middle" fill="#5d5e58" font-size="10">172.16.0.0/24</text>
+<figure class="arch">
+<svg class="chart" viewBox="0 0 960 330" role="img" aria-label="Four machines and their links">
+<defs><marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 .5 7.5 4 0 7.5z" fill="#4a4a52"/></marker></defs>
+<g font-size="13" fill="#e4e4e7">
+ <g transform="translate(30 95)"><rect width="200" height="140" rx="10" fill="#121216" stroke="#2c2c33"/><text x="100" y="28" text-anchor="middle" font-weight="600">Car · LTE UE</text><text x="100" y="52" text-anchor="middle" fill="#8b8b94" font-size="12">AWS DeepRacer</text><text x="100" y="74" text-anchor="middle" fill="#8b8b94" font-size="12">camera · LiDAR · IMU · battery</text><text x="100" y="96" text-anchor="middle" fill="#8b8b94" font-size="12">executes steering + throttle</text><text x="100" y="122" text-anchor="middle" fill="#5b5b64" font-size="11" font-family="ui-monospace,Menlo,monospace">172.16.0.x</text></g>
+ <g transform="translate(290 95)"><rect width="170" height="140" rx="10" fill="#121216" stroke="#2c2c33"/><text x="85" y="28" text-anchor="middle" font-weight="600">eNodeB</text><text x="85" y="52" text-anchor="middle" fill="#8b8b94" font-size="12">srsenb · bladeRF 2.0 xA9</text><text x="85" y="74" text-anchor="middle" fill="#8b8b94" font-size="12">band 7 · 10 MHz · 2×2</text><text x="85" y="96" text-anchor="middle" fill="#8b8b94" font-size="12">radio only</text><text x="85" y="122" text-anchor="middle" fill="#5b5b64" font-size="11" font-family="ui-monospace,Menlo,monospace">10.10.10.2</text></g>
+ <g transform="translate(520 60)"><rect width="230" height="210" rx="10" fill="#15151a" stroke="#4a4a52"/><text x="115" y="28" text-anchor="middle" font-weight="600">EPC · core and control</text><text x="115" y="52" text-anchor="middle" fill="#8b8b94" font-size="12">srsepc: MME · HSS · SPGW</text><text x="115" y="74" text-anchor="middle" fill="#8b8b94" font-size="12">coche.py · 20001/UDP · UI 8088/TCP</text><text x="115" y="96" text-anchor="middle" fill="#8b8b94" font-size="12">autonomous state machine</text><text x="115" y="118" text-anchor="middle" fill="#8b8b94" font-size="12">lane assist · IMU PID · LiDAR safety</text><text x="115" y="140" text-anchor="middle" fill="#8b8b94" font-size="12">NAT · routing · recording · replay</text><text x="115" y="166" text-anchor="middle" fill="#5b5b64" font-size="11" font-family="ui-monospace,Menlo,monospace">10.10.10.1</text><text x="115" y="192" text-anchor="middle" fill="#9ecbff" font-size="11">every decision is taken here</text></g>
+ <g transform="translate(790 95)"><rect width="150" height="140" rx="10" fill="#121216" stroke="#2c2c33"/><text x="75" y="28" text-anchor="middle" font-weight="600">Jetson Orin Nano</text><text x="75" y="52" text-anchor="middle" fill="#8b8b94" font-size="12">inference service</text><text x="75" y="74" text-anchor="middle" fill="#8b8b94" font-size="12">YOLO · :9001</text><text x="75" y="96" text-anchor="middle" fill="#8b8b94" font-size="12">offload only</text></g>
+</g>
+<g fill="none" stroke="#3a3a42" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)">
+ <path d="M232 165 H288"/><path d="M462 165 H518"/><path d="M752 165 H788"/>
+</g>
+<g font-size="11" fill="#5b5b64" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">
+ <text x="260" y="152">LTE Uu</text><text x="490" y="152">S1 · GTP-U</text><text x="770" y="152">HTTP</text>
+ <text x="260" y="256">UDP ↑ frames, IMU, LiDAR</text><text x="260" y="270">UDP ↓ command</text>
+</g>
+<text x="480" y="305" text-anchor="middle" font-size="12" fill="#5b5b64">the car never talks to the Jetson; the model can change without touching the vehicle</text>
+</svg>
+</figure>
 
-          <!-- eNodeB -->
-          <rect x="240" y="110" width="170" height="100" fill="#f4f3ee" stroke="#14181c" stroke-width="1.5"/>
-          <text x="325" y="138" text-anchor="middle" font-size="11" font-weight="600">eNodeB</text>
-          <text x="325" y="158" text-anchor="middle" fill="#5d5e58">srsenb · bladeRF 2.0</text>
-          <text x="325" y="178" text-anchor="middle" fill="#5d5e58">radio only</text>
-          <text x="325" y="198" text-anchor="middle" fill="#5d5e58" font-size="10">10.10.10.2</text>
+<h3>Measured from the UE</h3>
+<div class="kpis">
+  <div class="kpi"><b>38 ms</b>mean ICMP latency, 16–108 ms, no loss</div>
+  <div class="kpi"><b>15.0 / 23.5</b>Mbit/s TCP, uplink / downlink, iperf3 sustained</div>
+  <div class="kpi"><b>0 %</b>loss on a 5 Mbit/s UDP stream, 0 of 2,282 datagrams</div>
+  <div class="kpi"><b>4.7 ms</b>UDP jitter</div>
+</div>
 
-          <!-- EPC -->
-          <rect x="460" y="60" width="200" height="200" fill="#f4f3ee" stroke="#14181c" stroke-width="2"/>
-          <rect x="460" y="60" width="200" height="22" fill="#14181c"/>
-          <text x="560" y="76" text-anchor="middle" fill="#f4f3ee" font-weight="600">EPC · CORE / ORQUESTADOR</text>
-          <text x="560" y="100" text-anchor="middle" fill="#5d5e58" font-size="10">srsepc (MME+HSS+SPGW)</text>
-          <text x="560" y="118" text-anchor="middle" fill="#5d5e58" font-size="10">coche.py · 20001/UDP · 8088/TCP</text>
-          <text x="560" y="138" text-anchor="middle">decisión autónoma</text>
-          <text x="560" y="158" text-anchor="middle">lane assist · LiDAR safety</text>
-          <text x="560" y="178" text-anchor="middle">IMU speed PID</text>
-          <text x="560" y="198" text-anchor="middle" fill="#5d5e58" font-size="10">NAT · routing · DNS</text>
-          <text x="560" y="218" text-anchor="middle" fill="#5d5e58" font-size="10">grabación · replayer</text>
-          <text x="560" y="244" text-anchor="middle" fill="#486b3a" font-size="10" font-weight="600">CONTROL VIVE AQUÍ</text>
+<h2 id="vision">Vision</h2>
+<p>A traffic-sign detector trained on a dataset built for the project: 4,985 images and 10,962 annotations of the signs on the test track, 300 epochs on a YOLO backbone. Served behind a Roboflow-compatible endpoint on the Jetson, with a local fallback on the EPC. Every session is recorded as annotated video plus a frame manifest, so hard cases are relabelled and the model retrained without touching the control path.</p>
+<div class="kpis">
+  <div class="kpi"><b>95.5 %</b>mAP@50 on the validation split</div>
+  <div class="kpi"><b>94.0 %</b>precision</div>
+  <div class="kpi"><b>91.6 %</b>recall</div>
+  <div class="kpi"><b>92.8 %</b>F1 · the cone class stays near 60 %, small and clustered objects</div>
+</div>
 
-          <!-- Jetson -->
-          <rect x="710" y="110" width="220" height="100" fill="#f4f3ee" stroke="#486b3a" stroke-width="1.5"/>
-          <text x="820" y="138" text-anchor="middle" font-size="11" font-weight="600">JETSON ORIN NANO</text>
-          <text x="820" y="158" text-anchor="middle" fill="#5d5e58">inference-service</text>
-          <text x="820" y="178" text-anchor="middle" fill="#5d5e58">YOLO26 X · tp2-g4-2026/2</text>
-          <text x="820" y="198" text-anchor="middle" fill="#5d5e58" font-size="10">100.115.99.8:9001</text>
-        </g>
+<h2 id="control">Control</h2>
+<p>Everything that decides lives in the core. <span class="mono">coche.py</span> receives frames, battery, IMU and LiDAR over UDP and answers with a compact steering and throttle packet. The command is built in layers; each one can tighten the previous, none can loosen safety.</p>
+<div class="cols">
+  <div><b>State machine.</b> Detections become actions deterministically: a confirmed sign over an area and persistence threshold triggers a 90° turn with a manoeuvre lock; speed-limit 30 and 90 set throttle 0.50 and 0.70 for three seconds; STOP and no-entry hold neutral for five; stale frames or predictions fall back to neutral.</div>
+  <div><b>Lane assistance.</b> OpenCV detection of the blue and green tapes on the track, applying a bounded steering correction only on forward autonomous actions.</div>
+  <div><b>Speed control.</b> BMI160 IMU telemetry gives a bounded forward-speed estimate; a PID on the throttle holds the target when the track changes friction, never overriding LiDAR or the camera decision.</div>
+  <div><b>LiDAR safety.</b> A 45-beam front sector: an obstacle under 0.15 m forces a stop, 0.15–0.85 m caps throttle, 0.85–1.35 m adds steering correction. LiDAR vetoes the camera; a stale LiDAR does not.</div>
+  <div><b>Operator console.</b> Annotated live camera, manual and autonomous modes, hot tuning of cruise throttle, steering trim, lane gain and LiDAR sectors, telemetry, recording. 8088/TCP on the EPC.</div>
+  <div><b>Watchdog.</b> If the core stops sending commands past the timeout, the car slows down on its own. Radio loss degrades safely.</div>
+</div>
 
-        <!-- arrows -->
-        <line x1="190" y1="150" x2="240" y2="150" stroke="#14181c" stroke-width="1.5" marker-end="url(#ar)"/>
-        <line x1="410" y1="150" x2="460" y2="150" stroke="#14181c" stroke-width="1.5" marker-end="url(#ar)"/>
-        <line x1="660" y1="150" x2="710" y2="150" stroke="#486b3a" stroke-width="1.5" marker-end="url(#ar2)"/>
-        <line x1="710" y1="180" x2="660" y2="180" stroke="#486b3a" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#ar2)"/>
-        <line x1="460" y1="180" x2="410" y2="180" stroke="#14181c" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#ar)"/>
-        <line x1="240" y1="180" x2="190" y2="180" stroke="#14181c" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#ar)"/>
+<h2 id="demo">Demonstration</h2>
+<p>Three minutes on the lab track: the car enters autonomous mode, drives a sequence of signs built for the prototype, stops for a box placed in its way, and hands control back to the operator from the console.</p>
+<div class="video" id="video"><button type="button" id="play"><span>▶ Play the demonstration · YouTube, no cookies until you press play</span></button></div>
+<ol class="steps">
+  <li><b>Autonomous mode.</b> The operator switches modes from the console; lane assistance stabilises the car on the tapes.</li>
+  <li><b>Left turn.</b> The state machine executes a 90° turn once the detection clears area and persistence; trim is suspended to keep the lock.</li>
+  <li><b>Speed 90.</b> Throttle ramps to 0.70 for three seconds, then back to the cruise set on the console.</li>
+  <li><b>STOP.</b> Neutral for five seconds.</li>
+  <li><b>Right turn.</b> Same policy, other side, after the cooldown.</li>
+  <li><b>Speed 30.</b> Throttle 0.50 for three seconds; with fresh IMU data the PID holds the target.</li>
+  <li><b>Obstacle.</b> A box in front of the moving car: <span class="mono">lidar_processor.py</span> forces a stop under 0.15 m.</li>
+  <li><b>Back to manual.</b> The operator takes steering and throttle; the UDP source changes, nothing restarts.</li>
+</ol>
 
-        <!-- labels -->
-        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="#5d5e58">
-          <text x="215" y="142" text-anchor="middle">LTE Uu</text>
-          <text x="435" y="142" text-anchor="middle">S1</text>
-          <text x="685" y="142" text-anchor="middle">HTTP</text>
-          <text x="685" y="194" text-anchor="middle">detección</text>
-          <text x="435" y="194" text-anchor="middle">UDP · C</text>
-          <text x="215" y="194" text-anchor="middle">comando</text>
-          <text x="105" y="240" text-anchor="middle" font-size="9">datos · ejecuta</text>
-          <text x="325" y="240" text-anchor="middle" font-size="9">transporte radio</text>
-          <text x="820" y="240" text-anchor="middle" font-size="9">offload de inferencia</text>
-        </g>
-      </svg>
-    </div>
+<h2 id="deployment">Taking it to the A-601</h2>
+<p>The second half of the work plans the same service on the Valladolid–Segovia motorway, km 0 to 104, on 10 MHz of band 7 ceded by Vodafone under an academic contract. Traffic sizes the capacity, the radio study sizes the sites, and the cost and licensing chapters say what it takes to switch it on.</p>
 
-    <div class="grid c4" style="margin-top: 2rem">
-      <div class="card asphalt">
-        <span class="accent" aria-hidden="true"></span>
-        <div class="tag">EPC · Ordenador 1</div>
-        <h3>Núcleo LTE y control</h3>
-        <p>srsepc en <span class="mono">10.10.10.1</span>, asignación UE en
-        <span class="mono">172.16.0.0/24</span>. <span class="mono">coche.py</span> escucha
-        control en <span class="mono">20001/UDP</span> y sirve la consola del operador en
-        <span class="mono">8088/TCP</span>.</p>
-      </div>
-      <div class="card">
-        <span class="accent" aria-hidden="true"></span>
-        <div class="tag">eNodeB · Ordenador 2</div>
-        <h3>Radio acotada</h3>
-        <p>srsenb sobre <span class="mono">bladeRF 2.0 xA9</span> con MIMO 2×2 TM4. S1-MME
-        en <span class="mono">36412/SCTP</span> y GTP-U en <span class="mono">2152/UDP</span>.
-        Sin orquestación.</p>
-      </div>
-      <div class="card signal">
-        <span class="accent" aria-hidden="true"></span>
-        <div class="tag">Coche · DeepRacer</div>
-        <h3>Cliente físico</h3>
-        <p>Streams UDP de cámara <span class="mono">I</span>, batería <span class="mono">B</span>,
-        IMU <span class="mono">D</span> y LiDAR <span class="mono">L</span>. Ejecuta paquetes
-        de control <span class="mono">C</span> con steering y throttle.</p>
-      </div>
-      <div class="card lab">
-        <span class="accent" aria-hidden="true"></span>
-        <div class="tag">Jetson Orin Nano</div>
-        <h3>Inferencia offload</h3>
-        <p>Endpoint Roboflow-compatible en <span class="mono">9001/TCP</span>. Modelo
-        <span class="mono">tp2-g4-2026/2</span>. Nunca aloja orquestación, núcleo LTE ni
-        base de datos.</p>
-      </div>
-    </div>
-  </div>
-</section>
+<h3 id="traffic">Traffic on the corridor</h3>
+<p>Average daily traffic (IMD) from the Ministry of Transport's nine permanent counting stations on the stretch, 2010 to 2024, projected to 2026 with a weighted least-squares fit per station (2020 and 2021 at weight 0.3) and aggregated by sub-section length. Station VA-3070 has three years of data and its fit is indicative only; the rest fit with R² between 0.74 and 0.84.</p>
+<div class="kpis">
+  <div class="kpi"><b id="k-last">—</b>vehicles/day, length-weighted, last measured year</div>
+  <div class="kpi"><b id="k-2026">—</b>vehicles/day projected to 2026</div>
+  <div class="kpi"><b id="k-growth">—</b>growth to 2026</div>
+  <div class="kpi"><b id="k-heavy">—</b>heavy vehicles, last year</div>
+</div>
+<figure><svg class="chart" id="c-series" viewBox="0 0 960 300"></svg><figcaption>Length-weighted IMD of the corridor, 2010–2024, and the 2026 projection. Pandemic years marked.</figcaption></figure>
+<figure><svg class="chart" id="c-stations" viewBox="0 0 960 260"></svg><figcaption>Projected 2026 IMD by counting station, west (Valladolid) to east (Segovia).</figcaption></figure>
+<table id="t-stations"><thead><tr><th>station</th><th>sub-section</th><th class="n">km</th><th class="n">IMD last</th><th class="n">IMD 2026</th><th class="n">Δ</th><th class="n">R²</th></tr></thead><tbody></tbody></table>
 
-<!-- ─────────────── BLOQUE 2 · EVIDENCIA ─────────────── -->
-<section class="block" id="evidencia">
-  <div class="wrap">
-    <div class="block-head">
-      <div>
-        <span class="eyebrow"><span class="ord">02.</span>Evidencia del prototipo</span>
-        <h2>Lo que mide el laboratorio</h2>
-      </div>
-      <p class="lede">
-        Cifras del banco de pruebas y de la simulación del despliegue real sobre la A-601
-        entre Valladolid y Segovia. Cada métrica está respaldada por el informe del
-        proyecto y por capturas reproducibles del laboratorio.
-      </p>
-    </div>
+<h3 id="coverage">Radio coverage</h3>
+<p>Multi-transmitter study in Xirio-Online, 19 May 2026: COST-231 Hata with a 72 % rural correction fitted to the corridor, 25 masts (20 co-located on existing sites, 5 new), dual sectorisation, 44 of 50 sectors effective over the carriageway, 16-QAM as the dimensioning modulation. Percentages are over the served area; the study rectangle includes a wide strip on each side of the road that is not a target.</p>
+<div class="kpis">
+  <div class="kpi"><b id="k-cov">—</b>of the served area above RSRP −110 dBm</div>
+  <div class="kpi"><b id="k-rsrp">—</b>mean sector RSRP (dBm)</div>
+  <div class="kpi"><b id="k-sect">—</b>sectors with mean RSRP ≥ −95 dBm, of 44</div>
+  <div class="kpi"><b id="k-area">—</b>km² served</div>
+</div>
+<figure><svg class="chart" id="c-cov" viewBox="0 0 960 170"></svg><figcaption>Served area by RSRP band.</figcaption></figure>
+<figure><svg class="chart" id="c-sectors" viewBox="0 0 960 260"></svg><figcaption>Area where each sector is best server above −110 dBm, 44 sectors, largest first.</figcaption></figure>
 
-    <h3 style="margin-bottom: 0.6rem">Red 4G privada · laboratorio</h3>
-    <p class="small-caption" style="margin-bottom: 1rem">iperf3 y ping desde el UE bajo la red LTE privada del banco de pruebas</p>
-    <div class="slabs">
-      <div class="slab">
-        <div class="key">Latencia ICMP media</div>
-        <div class="val">38<span class="u">,042 ms</span></div>
-        <div class="note">Rango 16,158–107,741 ms, sin pérdida de paquetes ICMP.</div>
-      </div>
-      <div class="slab">
-        <div class="key">TCP UL · DL</div>
-        <div class="val">15,0 / 23,5<span class="u"> Mbit/s</span></div>
-        <div class="note">Subida desde UE; bajada hacia UE bajo iperf3 sostenido.</div>
-      </div>
-      <div class="slab">
-        <div class="key">UDP throughput</div>
-        <div class="val">4,99<span class="u"> Mbit/s</span></div>
-        <div class="note">Flujo constante 5 Mbit/s objetivo, 0 % de pérdida (0/2282).</div>
-      </div>
-      <div class="slab">
-        <div class="key">Jitter UDP</div>
-        <div class="val">4,737<span class="u"> ms</span></div>
-        <div class="note">Compatible con tráfico interactivo tiempo real.</div>
-      </div>
-    </div>
+<h3>Cost and licensing</h3>
+<div class="cols">
+  <div><b>Cost.</b> CAPEX for civil works, radio equipment, engineering and permits; recurring OPEX for co-location, power and maintenance; the first-year total. Figures and assumptions are in the economic chapter of the report.</div>
+  <div><b>Licensing.</b> Ley 11/2022 General de Telecomunicaciones; RD 123/2017 on use of the radio spectrum; RD 1066/2001 on exposure limits; procedure before SETID and registration with the CNMC.</div>
+</div>
 
-    <h3 style="margin-top: 3rem; margin-bottom: 0.6rem">Modelo de visión · YOLO26 X</h3>
-    <p class="small-caption" style="margin-bottom: 1rem">Reentrenado sobre dataset propio TP2-G4-2026 con 4 985 imágenes y 10 962 anotaciones</p>
-    <div class="slabs">
-      <div class="slab">
-        <div class="key">mAP@50</div>
-        <div class="val">95,5<span class="u"> %</span></div>
-        <div class="note">Sobre conjunto de validación tras 300 épocas.</div>
-      </div>
-      <div class="slab">
-        <div class="key">Precisión</div>
-        <div class="val">94,0<span class="u"> %</span></div>
-        <div class="note">Verdaderos positivos sobre detecciones emitidas.</div>
-      </div>
-      <div class="slab">
-        <div class="key">Recall</div>
-        <div class="val">91,6<span class="u"> %</span></div>
-        <div class="note">Cobertura de instancias reales del conjunto.</div>
-      </div>
-      <div class="slab">
-        <div class="key">F1</div>
-        <div class="val">92,8<span class="u"> %</span></div>
-        <div class="note">Clase CONO ~60 % mAP: limitada por objetos pequeños y agrupados.</div>
-      </div>
-    </div>
-
-    <h3 style="margin-top: 3rem; margin-bottom: 0.6rem">Despliegue A-601 · simulado en Xirio</h3>
-    <p class="small-caption" style="margin-bottom: 1rem">Banda 7 cedida por Vodafone S.A.U.; ver la página de cobertura para el detalle</p>
-    <div class="slabs">
-      <div class="slab">
-        <div class="key">Tramo evaluado</div>
-        <div class="val">104<span class="u"> km</span></div>
-        <div class="note">Valladolid – Segovia, kilómetros 0 a 104.</div>
-      </div>
-      <div class="slab">
-        <div class="key">Emplazamientos</div>
-        <div class="val">25</div>
-        <div class="note">20 existentes co-ubicados + 5 nuevos de obra propia.</div>
-      </div>
-      <div class="slab">
-        <div class="key">Sectoriales</div>
-        <div class="val">50</div>
-        <div class="note">Sectorización dual por mástil; 44 efectivas sobre calzada.</div>
-      </div>
-      <div class="slab">
-        <div class="key">Cobertura útil</div>
-        <div class="val">92,2<span class="u"> %</span></div>
-        <div class="note">Área servida con RSRP ≥ −110 dBm sobre el corredor.</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ─────────────── BLOQUE 3 · SERVICIOS DIFERENCIALES ─────────────── -->
-<section class="block" id="servicios">
-  <div class="wrap">
-    <div class="block-head">
-      <div>
-        <span class="eyebrow"><span class="ord">03.</span>Servicios</span>
-        <h2>Capas que viven en el EPC, no en el coche</h2>
-      </div>
-      <p class="lede">
-        El coche es un cliente delgado. Toda la inteligencia operativa (asistencia al
-        carril, control de velocidad por IMU, seguridad LiDAR y conducción autónoma) se
-        ejecuta como capas EPC-locales sobre el mismo flujo UDP, sin migrar orquestación
-        al vehículo ni a la Jetson.
-      </p>
-    </div>
-
-    <div class="grid c3">
-      <div class="card">
-        <span class="accent" aria-hidden="true"></span>
-        <div class="tag">Operador</div>
-        <h3>Consola web en vivo</h3>
-        <p>Cámara anotada, modo manual / autónomo, sliders de tuning en caliente
-        (cruise throttle, steering trim, ganancia de carril, sectores LiDAR) y telemetría
-        en <span class="mono">8088/TCP</span>.</p>
-      </div>
-      <div class="card asphalt">
-        <span class="accent" aria-hidden="true"></span>
-        <div class="tag">Decisión</div>
-        <h3>Conducción autónoma</h3>
-        <p>FSM determinista sobre detecciones del modelo: <span class="mono">VELOCIDAD-MAX-30</span> aplica 0,50 por 3 s,
-        <span class="mono">VELOCIDAD-MAX-90</span> aplica 0,70 por 3 s, y <span class="mono">STOP</span>
-        / <span class="mono">PROHIBIDO</span> retienen neutral durante 5 s.</p>
-      </div>
-      <div class="card lab">
-        <span class="accent" aria-hidden="true"></span>
-        <div class="tag">Visión clásica</div>
-        <h3>Asistencia al carril</h3>
-        <p>Detector OpenCV de las cintas azul y verde sobre la moqueta negra. Aplica
-        corrección de steering acotada únicamente en acciones autónomas hacia delante.</p>
-      </div>
-      <div class="card">
-        <span class="accent" aria-hidden="true"></span>
-        <div class="tag">Inercial</div>
-        <h3>Control PID por IMU</h3>
-        <p>BMI160 a través de paquetes <span class="mono">D</span>. Estimación acotada de
-        velocidad de avance que ajusta throttle autónomo sin nunca anular la seguridad
-        LiDAR ni la decisión de cámara.</p>
-      </div>
-      <div class="card alert">
-        <span class="accent" aria-hidden="true"></span>
-        <div class="tag">Seguridad</div>
-        <h3>LiDAR safety</h3>
-        <p>Sector frontal de 45 haces. Obstáculo a ≤ 0,15 m fuerza <span class="mono">lidar-stop</span>;
-        entre 0,15 y 0,85 m limita throttle; entre 0,85 y 1,35 m añade corrección de steering.
-        LiDAR caducado no anula cámara.</p>
-      </div>
-      <div class="card signal">
-        <span class="accent" aria-hidden="true"></span>
-        <div class="tag">Dataset</div>
-        <h3>Grabación y replay</h3>
-        <p>Captura de frames candidatos, vídeo MP4 anotado, <span class="mono">manifest.jsonl</span> y
-        flags críticos durante sesiones reales. El replayer ofline permite reetiquetar para
-        retraining sin tocar el camino de control.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ─────────────── BLOQUE 4 · DESPLIEGUE / LEGAL ─────────────── -->
-<section class="block" id="despliegue">
-  <div class="wrap">
-    <div class="block-head">
-      <div>
-        <span class="eyebrow"><span class="ord">04.</span>Despliegue real</span>
-        <h2>Cómo se lleva esto a la A-601</h2>
-      </div>
-      <p class="lede">
-        La memoria evalúa el coste y el cumplimiento normativo de un despliegue equivalente
-        sobre 104 km de autovía. El estudio de cobertura y el detalle de tráfico están
-        publicados en este sitio como vistas interactivas independientes.
-      </p>
-    </div>
-
-    <div class="grid c2">
-      <div class="bordered-box">
-        <span class="eyebrow"><span class="ord">04.1</span>Espectro</span>
-        <h3 style="margin-top: 0.6rem">Banda 7 cedida por Vodafone</h3>
-        <p>
-          El contrato académico cede 10 MHz por sentido en banda 7:
-          <strong>2540–2550 MHz</strong> en uplink y <strong>2660–2670 MHz</strong> en downlink.
-          La planificación adopta MIMO 2×2 con TM4, 16-QAM como modulación dimensionante y
-          corrección rural de COST-231 ajustada al corredor real.
-        </p>
-        <hr class="rule-thick"/>
-        <span class="eyebrow"><span class="ord">04.2</span>Marco normativo</span>
-        <h3 style="margin-top: 0.6rem">Sin atajos legales</h3>
-        <ul>
-          <li><strong>Ley 11/2022</strong>, General de Telecomunicaciones.</li>
-          <li><strong>RD 123/2017</strong>, sobre uso del dominio público radioeléctrico.</li>
-          <li><strong>RD 1066/2001</strong>, protección sanitaria frente a emisiones radioeléctricas.</li>
-          <li>Tramitación ante <strong>SETID</strong> y alta en el registro de la <strong>CNMC</strong>.</li>
-        </ul>
-      </div>
-
-      <div class="bordered-box">
-        <span class="eyebrow"><span class="ord">04.3</span>Resultados</span>
-        <h3 style="margin-top: 0.6rem">Cobertura sobre la calzada</h3>
-        <p>
-          La red propuesta cierra los huecos del escenario inicial y entrega cobertura útil
-          sobre el 92,2 % del área servida con RSRP ≥ −110 dBm. El RSRP medio entre los 44
-          sectores activos es de −96,9 dBm, prácticamente en el umbral de cobertura buena.
-        </p>
-        <p>
-          La validación cuantitativa se publica en
-          <a href="./coverage.html">Cobertura A-601</a> y el análisis de tráfico que sustenta
-          la capacidad en <a href="./dashboard.html">Dashboard A-601</a>.
-        </p>
-        <hr class="rule-thick"/>
-        <span class="eyebrow"><span class="ord">04.4</span>Económico</span>
-        <h3 style="margin-top: 0.6rem">Orden de magnitud</h3>
-        <p>
-          El estudio económico del proyecto separa CAPEX inicial (obra, equipamiento radio,
-          ingeniería y permisos), OPEX recurrente (co-ubicación, energía, mantenimiento) y
-          el coste del primer año. Las cifras concretas se justifican en el capítulo
-          económico de la memoria.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ─────────────── BLOQUE 5 · EQUIPO ─────────────── -->
-<section class="block" id="equipo">
-  <div class="wrap">
-    <div class="block-head">
-      <div>
-        <span class="eyebrow"><span class="ord">05.</span>Equipo</span>
-        <h2>Grupo 4 · responsabilidades operativas</h2>
-      </div>
-      <p class="lede">
-        Cada miembro del equipo es responsable principal de uno o varios nodos del
-        laboratorio. Las titularidades son explícitas para la trazabilidad técnica, pero la
-        integración extremo a extremo se trabaja entre los tres en sesiones conjuntas.
-      </p>
-    </div>
-
-    <div class="grid c3">
-      <article class="card">
-        <span class="accent" aria-hidden="true"></span>
-        <div class="tag">AS</div>
-        <h3>Alonso Sandoval</h3>
-        <p>Ordenador 1 (CORE / EPC) y Coche (DeepRacer). Estudio de cobertura con Xirio
-        sobre el tramo A-601 entre Valladolid y Segovia.</p>
-      </article>
-      <article class="card">
-        <span class="accent" aria-hidden="true"></span>
-        <div class="tag">LS</div>
-        <h3>Luis Francisco Sánchez</h3>
-        <p>Ordenador 2 (eNodeB) sobre bladeRF y srsenb. Bloque transversal de aspectos
-        legales y permisos del despliegue.</p>
-      </article>
-      <article class="card">
-        <span class="accent" aria-hidden="true"></span>
-        <div class="tag">MM</div>
-        <h3>Mario Medrano</h3>
-        <p>Jetson Orin Nano como nodo dedicado de inferencia. Coordinación de la
-        demostración final y preparación del informe técnico-económico.</p>
-      </article>
-    </div>
-  </div>
-</section>
-
-<footer class="site">
-  <div class="wrap">
-    <div class="cols">
-      <div class="colophon">
-        <strong>Taller de Proyectos II · Grupo 4</strong><br/>
-        Máster en Ingeniería de Telecomunicación · Universidad de Valladolid · Curso 2025–2026.<br/>
-        Sitio servido como dossier técnico del laboratorio; cifras tomadas del informe
-        del proyecto y de los validation logs de cada máquina.
-      </div>
-      <nav aria-label="Vistas técnicas">
-        <h4>Vistas técnicas</h4>
-        <a href="./dashboard.html">Dashboard A-601</a>
-        <a href="./coverage.html">Validación de cobertura</a>
-        <a href="./demo.html">Demostración</a>
-      </nav>
-      <nav aria-label="Repositorio">
-        <h4>Repositorio</h4>
-        <a href="https://github.com/TallerProyectos2/TP2" rel="noopener">GitHub · TallerProyectos2 / TP2</a>
-      </nav>
-    </div>
-    <div class="bottom">
-      <span>© 2026 Grupo 4 — uso académico</span>
-      <span>ETSIT · UVa</span>
-    </div>
-  </div>
+<footer>
+  <span>Alonso Sandoval · Mario Medrano · Luis F. Sánchez · University of Valladolid, 2025–2026</span>
+  <span><a href="https://github.com/asandova-ui/connected-vehicle-private-lte">repository</a> · <a href="https://alonsosandoval.com">alonsosandoval.com</a></span>
 </footer>
+</main>
 
+<script id="imd" type="application/json">{"metadata": {"carretera": "A-601", "tramo_proyecto": {"pk_inicial": 0, "pk_final": 104}, "fuente": "Ministerio de Transportes y Movilidad Sostenible - Intensidades Medias de Tráfico", "estaciones_analizadas": 9, "longitud_cubierta_km": 88.18, "metodologia": {"ajuste_pandemia": "Regresión lineal ponderada; años 2020 y 2021 reciben peso 0.3 para reducir el sesgo COVID-19", "modelo": "Mínimos cuadrados ponderados sobre IMD anual", "horizonte": 2026}, "resumen": {"imd_ponderada_ultimo_ano": 10934, "imd_ponderada_2026": 11357, "crecimiento_pct": 3.9}}, "estaciones": [{"estac": "SG-0450", "provincia": "SG", "descripcion": "DE LÍMITE DE PROVINCIA DE VALLADOLID A CUELLAR (CL-602)", "pk_inicial": 44.23, "pk_final": 50.13, "longitud_km": 5.9, "registros": 15, "imd_series": [{"year": 2010, "imd": 5572}, {"year": 2011, "imd": 5978}, {"year": 2012, "imd": 5738}, {"year": 2013, "imd": 5790}, {"year": 2014, "imd": 6131}, {"year": 2015, "imd": 6622}, {"year": 2016, "imd": 7100}, {"year": 2017, "imd": 7643}, {"year": 2018, "imd": 7633}, {"year": 2019, "imd": 7644}, {"year": 2020, "imd": 5708}, {"year": 2021, "imd": 7416}, {"year": 2022, "imd": 7886}, {"year": 2023, "imd": 8001}, {"year": 2024, "imd": 8323}], "imd_l_series": [{"year": 2010, "imd_l": 4818}, {"year": 2011, "imd_l": 5217}, {"year": 2012, "imd_l": 4999}, {"year": 2013, "imd_l": 5042}, {"year": 2014, "imd_l": 5322}, {"year": 2015, "imd_l": 5754}, {"year": 2016, "imd_l": 6128}, {"year": 2017, "imd_l": 6580}, {"year": 2018, "imd_l": 6532}, {"year": 2019, "imd_l": 6523}, {"year": 2020, "imd_l": 4651}, {"year": 2021, "imd_l": 6245}, {"year": 2022, "imd_l": 6663}, {"year": 2023, "imd_l": 6738}, {"year": 2024, "imd_l": 7065}], "imd_p_series": [{"year": 2010, "imd_p": 754}, {"year": 2011, "imd_p": 761}, {"year": 2012, "imd_p": 739}, {"year": 2013, "imd_p": 748}, {"year": 2014, "imd_p": 809}, {"year": 2015, "imd_p": 868}, {"year": 2016, "imd_p": 972}, {"year": 2017, "imd_p": 1063}, {"year": 2018, "imd_p": 1101}, {"year": 2019, "imd_p": 1121}, {"year": 2020, "imd_p": 1057}, {"year": 2021, "imd_p": 1171}, {"year": 2022, "imd_p": 1223}, {"year": 2023, "imd_p": 1263}, {"year": 2024, "imd_p": 1258}], "imd_last_year": 2024, "imd_last": 8323, "imd_2026": 8745, "imd_l_2026": 7356, "imd_p_2026": 1389, "growth_pct_to_2026": 5.1, "regression": {"slope": 195.84, "intercept": -388028.19, "r2": 0.8156}, "pct_pesados_last": 15.11474228, "velocidad_media_last": 118.0}, {"estac": "SG-0455", "provincia": "SG", "descripcion": "DE CUÉLLAR (CL-602) A NAVALMANZANO (SG-332)", "pk_inicial": 50.13, "pk_final": 77.62, "longitud_km": 27.49, "registros": 15, "imd_series": [{"year": 2010, "imd": 6450}, {"year": 2011, "imd": 6783}, {"year": 2012, "imd": 6378}, {"year": 2013, "imd": 6443}, {"year": 2014, "imd": 6818}, {"year": 2015, "imd": 7292}, {"year": 2016, "imd": 7738}, {"year": 2017, "imd": 8205}, {"year": 2018, "imd": 8013}, {"year": 2019, "imd": 7983}, {"year": 2020, "imd": 6348}, {"year": 2021, "imd": 8143}, {"year": 2022, "imd": 8521}, {"year": 2023, "imd": 9043}, {"year": 2024, "imd": 9056}], "imd_l_series": [{"year": 2010, "imd_l": 5427}, {"year": 2011, "imd_l": 5831}, {"year": 2012, "imd_l": 5497}, {"year": 2013, "imd_l": 5545}, {"year": 2014, "imd_l": 5844}, {"year": 2015, "imd_l": 6247}, {"year": 2016, "imd_l": 6635}, {"year": 2017, "imd_l": 7031}, {"year": 2018, "imd_l": 6799}, {"year": 2019, "imd_l": 6797}, {"year": 2020, "imd_l": 5166}, {"year": 2021, "imd_l": 6836}, {"year": 2022, "imd_l": 7207}, {"year": 2023, "imd_l": 7162}, {"year": 2024, "imd_l": 7633}], "imd_p_series": [{"year": 2010, "imd_p": 1023}, {"year": 2011, "imd_p": 952}, {"year": 2012, "imd_p": 881}, {"year": 2013, "imd_p": 898}, {"year": 2014, "imd_p": 974}, {"year": 2015, "imd_p": 1045}, {"year": 2016, "imd_p": 1103}, {"year": 2017, "imd_p": 1174}, {"year": 2018, "imd_p": 1214}, {"year": 2019, "imd_p": 1186}, {"year": 2020, "imd_p": 1182}, {"year": 2021, "imd_p": 1307}, {"year": 2022, "imd_p": 1314}, {"year": 2023, "imd_p": 1881}, {"year": 2024, "imd_p": 1423}], "imd_last_year": 2024, "imd_last": 9056, "imd_2026": 9394, "imd_l_2026": 7774, "imd_p_2026": 1621, "growth_pct_to_2026": 3.7, "regression": {"slope": 193.95, "intercept": -383540.49, "r2": 0.8288}, "pct_pesados_last": 15.71333922, "velocidad_media_last": 119.0}, {"estac": "SG-0460", "provincia": "SG", "descripcion": "DE NAVALMANZANO (SG-332) A TABANERA LA LUENGA (SG-211)", "pk_inicial": 77.62, "pk_final": 91.44, "longitud_km": 13.82, "registros": 15, "imd_series": [{"year": 2010, "imd": 5341}, {"year": 2011, "imd": 5685}, {"year": 2012, "imd": 5435}, {"year": 2013, "imd": 5405}, {"year": 2014, "imd": 5663}, {"year": 2015, "imd": 6079}, {"year": 2016, "imd": 6454}, {"year": 2017, "imd": 6851}, {"year": 2018, "imd": 6663}, {"year": 2019, "imd": 6657}, {"year": 2020, "imd": 4991}, {"year": 2021, "imd": 6651}, {"year": 2022, "imd": 7110}, {"year": 2023, "imd": 7640}, {"year": 2024, "imd": 7623}], "imd_l_series": [{"year": 2010, "imd_l": 4521}, {"year": 2011, "imd_l": 4847}, {"year": 2012, "imd_l": 4639}, {"year": 2013, "imd_l": 4634}, {"year": 2014, "imd_l": 4877}, {"year": 2015, "imd_l": 5234}, {"year": 2016, "imd_l": 5542}, {"year": 2017, "imd_l": 5879}, {"year": 2018, "imd_l": 5685}, {"year": 2019, "imd_l": 5704}, {"year": 2020, "imd_l": 4115}, {"year": 2021, "imd_l": 5667}, {"year": 2022, "imd_l": 6111}, {"year": 2023, "imd_l": 6151}, {"year": 2024, "imd_l": 6525}], "imd_p_series": [{"year": 2010, "imd_p": 820}, {"year": 2011, "imd_p": 838}, {"year": 2012, "imd_p": 796}, {"year": 2013, "imd_p": 771}, {"year": 2014, "imd_p": 786}, {"year": 2015, "imd_p": 845}, {"year": 2016, "imd_p": 912}, {"year": 2017, "imd_p": 972}, {"year": 2018, "imd_p": 978}, {"year": 2019, "imd_p": 953}, {"year": 2020, "imd_p": 876}, {"year": 2021, "imd_p": 984}, {"year": 2022, "imd_p": 999}, {"year": 2023, "imd_p": 1489}, {"year": 2024, "imd_p": 1098}], "imd_last_year": 2024, "imd_last": 7623, "imd_2026": 7850, "imd_l_2026": 6610, "imd_p_2026": 1240, "growth_pct_to_2026": 3.0, "regression": {"slope": 162.34, "intercept": -321060.34, "r2": 0.7964}, "pct_pesados_last": 14.40377804, "velocidad_media_last": 118.0}, {"estac": "SG-0465", "provincia": "SG", "descripcion": "DE TABANERA LA LUENGA (SG-211) A  VALSECA (CL-603)", "pk_inicial": 91.44, "pk_final": 104.9, "longitud_km": 13.46, "registros": 15, "imd_series": [{"year": 2010, "imd": 7998}, {"year": 2011, "imd": 8260}, {"year": 2012, "imd": 7646}, {"year": 2013, "imd": 7660}, {"year": 2014, "imd": 8239}, {"year": 2015, "imd": 8771}, {"year": 2016, "imd": 9233}, {"year": 2017, "imd": 9735}, {"year": 2018, "imd": 9505}, {"year": 2019, "imd": 9473}, {"year": 2020, "imd": 7138}, {"year": 2021, "imd": 9357}, {"year": 2022, "imd": 9935}, {"year": 2023, "imd": 10481}, {"year": 2024, "imd": 10575}], "imd_l_series": [{"year": 2010, "imd_l": 7169}, {"year": 2011, "imd_l": 7450}, {"year": 2012, "imd_l": 6882}, {"year": 2013, "imd_l": 6874}, {"year": 2014, "imd_l": 7417}, {"year": 2015, "imd_l": 7899}, {"year": 2016, "imd_l": 8311}, {"year": 2017, "imd_l": 8745}, {"year": 2018, "imd_l": 8517}, {"year": 2019, "imd_l": 8470}, {"year": 2020, "imd_l": 6205}, {"year": 2021, "imd_l": 8293}, {"year": 2022, "imd_l": 8857}, {"year": 2023, "imd_l": 8670}, {"year": 2024, "imd_l": 9380}], "imd_p_series": [{"year": 2010, "imd_p": 829}, {"year": 2011, "imd_p": 810}, {"year": 2012, "imd_p": 764}, {"year": 2013, "imd_p": 786}, {"year": 2014, "imd_p": 822}, {"year": 2015, "imd_p": 872}, {"year": 2016, "imd_p": 922}, {"year": 2017, "imd_p": 990}, {"year": 2018, "imd_p": 988}, {"year": 2019, "imd_p": 1003}, {"year": 2020, "imd_p": 933}, {"year": 2021, "imd_p": 1064}, {"year": 2022, "imd_p": 1078}, {"year": 2023, "imd_p": 1811}, {"year": 2024, "imd_p": 1195}], "imd_last_year": 2024, "imd_last": 10575, "imd_2026": 10832, "imd_l_2026": 9417, "imd_p_2026": 1415, "growth_pct_to_2026": 2.4, "regression": {"slope": 195.23, "intercept": -384702.88, "r2": 0.7355}, "pct_pesados_last": 11.30023641, "velocidad_media_last": 117.0}, {"estac": "VA-0600", "provincia": "VA", "descripcion": "DE CL-600 A ALDEAMAYOR (VA-200)", "pk_inicial": 12.89, "pk_final": 17.59, "longitud_km": 4.7, "registros": 15, "imd_series": [{"year": 2010, "imd": 12751}, {"year": 2011, "imd": 13114}, {"year": 2012, "imd": 12451}, {"year": 2013, "imd": 12529}, {"year": 2014, "imd": 13082}, {"year": 2015, "imd": 13913}, {"year": 2016, "imd": 14821}, {"year": 2017, "imd": 15751}, {"year": 2018, "imd": 15952}, {"year": 2019, "imd": 16203}, {"year": 2020, "imd": 12869}, {"year": 2021, "imd": 15951}, {"year": 2022, "imd": 16626}, {"year": 2023, "imd": 16917}, {"year": 2024, "imd": 17550}], "imd_l_series": [{"year": 2010, "imd_l": 11457}, {"year": 2011, "imd_l": 11870}, {"year": 2012, "imd_l": 11218}, {"year": 2013, "imd_l": 11274}, {"year": 2014, "imd_l": 11761}, {"year": 2015, "imd_l": 12501}, {"year": 2016, "imd_l": 13258}, {"year": 2017, "imd_l": 14070}, {"year": 2018, "imd_l": 14216}, {"year": 2019, "imd_l": 14453}, {"year": 2020, "imd_l": 11277}, {"year": 2021, "imd_l": 14203}, {"year": 2022, "imd_l": 14826}, {"year": 2023, "imd_l": 15078}, {"year": 2024, "imd_l": 15657}], "imd_p_series": [{"year": 2010, "imd_p": 1294}, {"year": 2011, "imd_p": 1244}, {"year": 2012, "imd_p": 1233}, {"year": 2013, "imd_p": 1255}, {"year": 2014, "imd_p": 1321}, {"year": 2015, "imd_p": 1412}, {"year": 2016, "imd_p": 1563}, {"year": 2017, "imd_p": 1681}, {"year": 2018, "imd_p": 1736}, {"year": 2019, "imd_p": 1750}, {"year": 2020, "imd_p": 1592}, {"year": 2021, "imd_p": 1748}, {"year": 2022, "imd_p": 1800}, {"year": 2023, "imd_p": 1839}, {"year": 2024, "imd_p": 1893}], "imd_last_year": 2024, "imd_last": 17550, "imd_2026": 18194, "imd_l_2026": 16161, "imd_p_2026": 2033, "growth_pct_to_2026": 3.7, "regression": {"slope": 370.21, "intercept": -731858.24, "r2": 0.8412}, "pct_pesados_last": 10.78632479, "velocidad_media_last": 114.0}, {"estac": "VA-0605", "provincia": "VA", "descripcion": "DE ALDEAMAYOR (VA-200) A PORTILLO (VA-301)", "pk_inicial": 17.59, "pk_final": 24.24, "longitud_km": 6.65, "registros": 15, "imd_series": [{"year": 2010, "imd": 10460}, {"year": 2011, "imd": 10883}, {"year": 2012, "imd": 10233}, {"year": 2013, "imd": 10291}, {"year": 2014, "imd": 10702}, {"year": 2015, "imd": 11401}, {"year": 2016, "imd": 12113}, {"year": 2017, "imd": 12855}, {"year": 2018, "imd": 12992}, {"year": 2019, "imd": 13188}, {"year": 2020, "imd": 10363}, {"year": 2021, "imd": 12947}, {"year": 2022, "imd": 13482}, {"year": 2023, "imd": 13751}, {"year": 2024, "imd": 14357}], "imd_l_series": [{"year": 2010, "imd_l": 9262}, {"year": 2011, "imd_l": 9728}, {"year": 2012, "imd_l": 9138}, {"year": 2013, "imd_l": 9172}, {"year": 2014, "imd_l": 9542}, {"year": 2015, "imd_l": 10170}, {"year": 2016, "imd_l": 10755}, {"year": 2017, "imd_l": 11402}, {"year": 2018, "imd_l": 11514}, {"year": 2019, "imd_l": 11672}, {"year": 2020, "imd_l": 8936}, {"year": 2021, "imd_l": 11287}, {"year": 2022, "imd_l": 11794}, {"year": 2023, "imd_l": 12080}, {"year": 2024, "imd_l": 12646}], "imd_p_series": [{"year": 2010, "imd_p": 1198}, {"year": 2011, "imd_p": 1155}, {"year": 2012, "imd_p": 1095}, {"year": 2013, "imd_p": 1119}, {"year": 2014, "imd_p": 1160}, {"year": 2015, "imd_p": 1231}, {"year": 2016, "imd_p": 1358}, {"year": 2017, "imd_p": 1453}, {"year": 2018, "imd_p": 1478}, {"year": 2019, "imd_p": 1516}, {"year": 2020, "imd_p": 1427}, {"year": 2021, "imd_p": 1660}, {"year": 2022, "imd_p": 1688}, {"year": 2023, "imd_p": 1671}, {"year": 2024, "imd_p": 1711}], "imd_last_year": 2024, "imd_last": 14357, "imd_2026": 14757, "imd_l_2026": 12931, "imd_p_2026": 1825, "growth_pct_to_2026": 2.8, "regression": {"slope": 290.56, "intercept": -573914.7, "r2": 0.8239}, "pct_pesados_last": 11.91753152, "velocidad_media_last": 108.0}, {"estac": "VA-0610", "provincia": "VA", "descripcion": "DE PORTILLO (VA-301) A SANTIAGO DEL ARROYO (VP-2203)", "pk_inicial": 24.24, "pk_final": 30.11, "longitud_km": 5.87, "registros": 15, "imd_series": [{"year": 2010, "imd": 6659}, {"year": 2011, "imd": 7044}, {"year": 2012, "imd": 6740}, {"year": 2013, "imd": 6759}, {"year": 2014, "imd": 7081}, {"year": 2015, "imd": 7587}, {"year": 2016, "imd": 8073}, {"year": 2017, "imd": 8629}, {"year": 2018, "imd": 8538}, {"year": 2019, "imd": 8570}, {"year": 2020, "imd": 6501}, {"year": 2021, "imd": 8406}, {"year": 2022, "imd": 8925}, {"year": 2023, "imd": 9064}, {"year": 2024, "imd": 9388}], "imd_l_series": [{"year": 2010, "imd_l": 5754}, {"year": 2011, "imd_l": 6136}, {"year": 2012, "imd_l": 5875}, {"year": 2013, "imd_l": 5911}, {"year": 2014, "imd_l": 6178}, {"year": 2015, "imd_l": 6628}, {"year": 2016, "imd_l": 7015}, {"year": 2017, "imd_l": 7475}, {"year": 2018, "imd_l": 7370}, {"year": 2019, "imd_l": 7365}, {"year": 2020, "imd_l": 5372}, {"year": 2021, "imd_l": 7131}, {"year": 2022, "imd_l": 7565}, {"year": 2023, "imd_l": 7671}, {"year": 2024, "imd_l": 8010}], "imd_p_series": [{"year": 2010, "imd_p": 905}, {"year": 2011, "imd_p": 908}, {"year": 2012, "imd_p": 865}, {"year": 2013, "imd_p": 848}, {"year": 2014, "imd_p": 903}, {"year": 2015, "imd_p": 959}, {"year": 2016, "imd_p": 1058}, {"year": 2017, "imd_p": 1154}, {"year": 2018, "imd_p": 1168}, {"year": 2019, "imd_p": 1205}, {"year": 2020, "imd_p": 1129}, {"year": 2021, "imd_p": 1275}, {"year": 2022, "imd_p": 1360}, {"year": 2023, "imd_p": 1393}, {"year": 2024, "imd_p": 1378}], "imd_last_year": 2024, "imd_last": 9388, "imd_2026": 9737, "imd_l_2026": 8249, "imd_p_2026": 1488, "growth_pct_to_2026": 3.7, "regression": {"slope": 195.53, "intercept": -386397.53, "r2": 0.8046}, "pct_pesados_last": 14.67831274, "velocidad_media_last": 107.0}, {"estac": "VA-3020", "provincia": "VA", "descripcion": "DE ENLACE ÁREA INDUSTRIAL SALIDA 6  A CL-600", "pk_inicial": 4.4, "pk_final": 12.89, "longitud_km": 8.49, "registros": 15, "imd_series": [{"year": 2010, "imd": 15226}, {"year": 2011, "imd": 13980}, {"year": 2012, "imd": 13331}, {"year": 2013, "imd": 13502}, {"year": 2014, "imd": 14211}, {"year": 2015, "imd": 14139}, {"year": 2016, "imd": 15255}, {"year": 2017, "imd": 16381}, {"year": 2018, "imd": 16927}, {"year": 2019, "imd": 16979}, {"year": 2020, "imd": 13908}, {"year": 2021, "imd": 17589}, {"year": 2022, "imd": 17569}, {"year": 2023, "imd": 18114}, {"year": 2024, "imd": 17905}], "imd_l_series": [{"year": 2010, "imd_l": 11536}, {"year": 2011, "imd_l": 11271}, {"year": 2012, "imd_l": 11907}, {"year": 2013, "imd_l": 12076}, {"year": 2014, "imd_l": 12737}, {"year": 2015, "imd_l": 12596}, {"year": 2016, "imd_l": 13576}, {"year": 2017, "imd_l": 14390}, {"year": 2018, "imd_l": 14801}, {"year": 2019, "imd_l": 15309}, {"year": 2020, "imd_l": 12075}, {"year": 2021, "imd_l": 14739}, {"year": 2022, "imd_l": 15204}, {"year": 2023, "imd_l": 15447}, {"year": 2024, "imd_l": 15783}], "imd_p_series": [{"year": 2010, "imd_p": 3690}, {"year": 2011, "imd_p": 2709}, {"year": 2012, "imd_p": 1424}, {"year": 2013, "imd_p": 1426}, {"year": 2014, "imd_p": 1474}, {"year": 2015, "imd_p": 1543}, {"year": 2016, "imd_p": 1679}, {"year": 2017, "imd_p": 1991}, {"year": 2018, "imd_p": 2126}, {"year": 2019, "imd_p": 1670}, {"year": 2020, "imd_p": 1833}, {"year": 2021, "imd_p": 2850}, {"year": 2022, "imd_p": 2365}, {"year": 2023, "imd_p": 2667}, {"year": 2024, "imd_p": 2122}], "imd_last_year": 2024, "imd_last": 17905, "imd_2026": 18740, "imd_l_2026": 16684, "imd_p_2026": 2056, "growth_pct_to_2026": 4.7, "regression": {"slope": 329.12, "intercept": -648058.55, "r2": 0.7378}, "pct_pesados_last": 11.85143815, "velocidad_media_last": 105.0}, {"estac": "VA-3070", "provincia": "VA", "descripcion": "DE VALLADOLID (VA-30) A ENLACE ÁREA INDUSTRIAL SALIDA 6", "pk_inicial": 4.42, "pk_final": 6.22, "longitud_km": 1.8, "registros": 3, "imd_series": [{"year": 2022, "imd": 17768}, {"year": 2023, "imd": 22596}, {"year": 2024, "imd": 18544}], "imd_l_series": [{"year": 2022, "imd_l": 14242}, {"year": 2023, "imd_l": 19029}, {"year": 2024, "imd_l": 15630}], "imd_p_series": [{"year": 2022, "imd_p": 3526}, {"year": 2023, "imd_p": 3567}, {"year": 2024, "imd_p": 2914}], "imd_last_year": 2024, "imd_last": 18544, "imd_2026": 20800, "imd_l_2026": 18382, "imd_p_2026": 2418, "growth_pct_to_2026": 12.2, "regression": {"slope": 388.0, "intercept": -765288.0, "r2": 0.0224}, "pct_pesados_last": 15.71397757, "velocidad_media_last": 57.0}]}</script>
+<script id="cov" type="application/json">{"metadata": {"fuente": "Xirio-Online, estudio multitransmisor consolidado", "fecha": "2026-05-19", "tipo": "RSRP por mejor servidor + por transmisor", "rectangulo_km2": 7242.1, "area_con_servicio_km2": 1135.0, "zona_servicio_km2": 440.3}, "agregado": {"area_m150": 1135.0, "area_m110": 1046.1, "area_m95": 378.0, "area_m86": 107.9, "pct_rect_m150": 15.67, "pct_rect_m110": 14.44, "pct_rect_m95": 5.22, "pct_rect_m86": 1.49, "pct_servida_m110": 92.17, "pct_servida_m95": 33.31, "pct_servida_m86": 9.51}, "rsrp": {"media_sectores": -96.9, "mediana_sectores": -97.1, "p70_sectores": -101.8, "p90_sectores": -107.9, "media_transmisores": -126.2}, "sectores": [{"idx": 0, "media": -98.2, "p50": -97.8, "p90": -109.3, "area_m110": 40.19, "area_m95": 16.21, "pct_m110": 0.555}, {"idx": 1, "media": -97.2, "p50": -97.5, "p90": -106.0, "area_m110": 6.51, "area_m95": 2.03, "pct_m110": 0.09}, {"idx": 2, "media": -99.3, "p50": -98.9, "p90": -111.3, "area_m110": 9.86, "area_m95": 3.55, "pct_m110": 0.136}, {"idx": 3, "media": -89.7, "p50": -90.4, "p90": -103.9, "area_m110": 5.66, "area_m95": 4.95, "pct_m110": 0.078}, {"idx": 4, "media": -100.8, "p50": -101.1, "p90": -110.0, "area_m110": 45.11, "area_m95": 12.33, "pct_m110": 0.623}, {"idx": 5, "media": -98.7, "p50": -99.6, "p90": -108.4, "area_m110": 26.76, "area_m95": 7.28, "pct_m110": 0.369}, {"idx": 6, "media": -93.0, "p50": -91.4, "p90": -107.6, "area_m110": 11.59, "area_m95": 7.62, "pct_m110": 0.16}, {"idx": 7, "media": -94.9, "p50": -94.4, "p90": -104.4, "area_m110": 24.09, "area_m95": 13.29, "pct_m110": 0.333}, {"idx": 8, "media": -99.3, "p50": -100.1, "p90": -106.4, "area_m110": 61.3, "area_m95": 14.23, "pct_m110": 0.846}, {"idx": 9, "media": -97.9, "p50": -98.3, "p90": -110.1, "area_m110": 13.73, "area_m95": 5.39, "pct_m110": 0.19}, {"idx": 10, "media": -96.9, "p50": -97.5, "p90": -107.5, "area_m110": 33.49, "area_m95": 13.56, "pct_m110": 0.462}, {"idx": 11, "media": -98.7, "p50": -99.8, "p90": -109.9, "area_m110": 24.56, "area_m95": 8.76, "pct_m110": 0.339}, {"idx": 12, "media": -101.5, "p50": -103.1, "p90": -110.1, "area_m110": 40.0, "area_m95": 9.01, "pct_m110": 0.552}, {"idx": 13, "media": -99.4, "p50": -101.5, "p90": -110.5, "area_m110": 19.19, "area_m95": 7.49, "pct_m110": 0.265}, {"idx": 14, "media": -96.0, "p50": -94.3, "p90": -110.5, "area_m110": 19.33, "area_m95": 11.26, "pct_m110": 0.267}, {"idx": 15, "media": -87.2, "p50": -86.1, "p90": -98.0, "area_m110": 5.46, "area_m95": 4.79, "pct_m110": 0.075}, {"idx": 16, "media": -93.5, "p50": -97.5, "p90": -106.8, "area_m110": 5.49, "area_m95": 2.57, "pct_m110": 0.076}, {"idx": 17, "media": -92.2, "p50": -91.5, "p90": -104.0, "area_m110": 12.6, "area_m95": 7.87, "pct_m110": 0.174}, {"idx": 18, "media": -93.8, "p50": -93.6, "p90": -104.9, "area_m110": 15.08, "area_m95": 8.73, "pct_m110": 0.208}, {"idx": 19, "media": -83.9, "p50": -80.9, "p90": -99.0, "area_m110": 2.77, "area_m95": 2.38, "pct_m110": 0.038}, {"idx": 20, "media": -101.7, "p50": -103.5, "p90": -110.6, "area_m110": 31.81, "area_m95": 7.08, "pct_m110": 0.439}, {"idx": 21, "media": -92.8, "p50": -92.0, "p90": -106.6, "area_m110": 7.65, "area_m95": 4.66, "pct_m110": 0.106}, {"idx": 22, "media": -98.4, "p50": -100.0, "p90": -110.0, "area_m110": 20.11, "area_m95": 7.96, "pct_m110": 0.278}, {"idx": 23, "media": -103.5, "p50": -104.6, "p90": -110.5, "area_m110": 42.44, "area_m95": 4.76, "pct_m110": 0.586}, {"idx": 24, "media": -95.4, "p50": -94.5, "p90": -108.1, "area_m110": 19.01, "area_m95": 10.26, "pct_m110": 0.263}, {"idx": 25, "media": -94.2, "p50": -94.1, "p90": -107.5, "area_m110": 11.84, "area_m95": 6.5, "pct_m110": 0.163}, {"idx": 26, "media": -95.4, "p50": -94.6, "p90": -107.6, "area_m110": 17.31, "area_m95": 9.26, "pct_m110": 0.239}, {"idx": 27, "media": -98.7, "p50": -99.5, "p90": -110.0, "area_m110": 15.98, "area_m95": 6.22, "pct_m110": 0.221}, {"idx": 28, "media": -101.0, "p50": -103.0, "p90": -110.5, "area_m110": 25.08, "area_m95": 6.94, "pct_m110": 0.346}, {"idx": 29, "media": -98.4, "p50": -99.0, "p90": -109.4, "area_m110": 23.4, "area_m95": 8.27, "pct_m110": 0.323}, {"idx": 30, "media": -99.6, "p50": -100.0, "p90": -109.5, "area_m110": 34.97, "area_m95": 9.78, "pct_m110": 0.483}, {"idx": 31, "media": -99.3, "p50": -100.5, "p90": -109.6, "area_m110": 32.16, "area_m95": 10.35, "pct_m110": 0.444}, {"idx": 32, "media": -98.1, "p50": -98.6, "p90": -109.3, "area_m110": 26.66, "area_m95": 10.19, "pct_m110": 0.368}, {"idx": 33, "media": -99.1, "p50": -100.8, "p90": -110.1, "area_m110": 20.75, "area_m95": 7.74, "pct_m110": 0.287}, {"idx": 34, "media": -98.6, "p50": -99.8, "p90": -110.0, "area_m110": 21.28, "area_m95": 7.49, "pct_m110": 0.294}, {"idx": 35, "media": -100.0, "p50": -100.4, "p90": -108.6, "area_m110": 52.31, "area_m95": 11.68, "pct_m110": 0.722}, {"idx": 36, "media": -91.6, "p50": -89.4, "p90": -107.9, "area_m110": 12.41, "area_m95": 9.8, "pct_m110": 0.171}, {"idx": 37, "media": -91.4, "p50": -90.1, "p90": -100.5, "area_m110": 17.28, "area_m95": 13.05, "pct_m110": 0.239}, {"idx": 38, "media": -99.8, "p50": -99.6, "p90": -107.1, "area_m110": 42.81, "area_m95": 8.02, "pct_m110": 0.591}, {"idx": 39, "media": -98.7, "p50": -98.4, "p90": -109.4, "area_m110": 65.95, "area_m95": 23.12, "pct_m110": 0.911}, {"idx": 40, "media": -100.5, "p50": -103.9, "p90": -109.5, "area_m110": 16.48, "area_m95": 4.44, "pct_m110": 0.228}, {"idx": 41, "media": -95.3, "p50": -94.1, "p90": -106.3, "area_m110": 17.58, "area_m95": 9.79, "pct_m110": 0.243}, {"idx": 42, "media": -97.5, "p50": -96.3, "p90": -108.9, "area_m110": 25.86, "area_m95": 12.58, "pct_m110": 0.357}, {"idx": 43, "media": -100.9, "p50": -101.5, "p90": -110.5, "area_m110": 22.18, "area_m95": 4.79, "pct_m110": 0.306}], "distribucion_rsrp_medio": {"[-150,-110)": 0, "[-110,-95)": 32, "[-95,-86)": 11, "[-86,0)": 1}, "umbrales": {"minimo_servicio_dbm": -110, "cobertura_buena_dbm": -95, "cobertura_excelente_dbm": -86}}</script>
 <script>
-  // Hamburger menu toggle
-  (function(){
-    var btn = document.querySelector('nav.bar .menu-toggle');
-    var list = document.getElementById('nav-list');
-    if (!btn || !list) return;
-    btn.addEventListener('click', function(){
-      var open = list.classList.toggle('open');
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    });
-  })();
-</script>
+(() => {
+  const imd = JSON.parse(document.getElementById("imd").textContent);
+  const cov = JSON.parse(document.getElementById("cov").textContent);
+  const fmt = (n) => Math.round(n).toLocaleString("en-GB");
+  const $ = (id) => document.getElementById(id);
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (name, attrs, text) => { const e = document.createElementNS(NS, name); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
 
+  // ---- tráfico ----
+  const st = imd.estaciones.slice().sort((a, b) => a.pk_inicial - b.pk_inicial);
+  const years = st[0].imd_series.map((p) => p.year);
+  const agg = years.map((y) => { let s = 0, L = 0; for (const e of st) { const p = e.imd_series.find((q) => q.year === y); if (p) { s += p.imd * e.longitud_km; L += e.longitud_km; } } return { year: y, imd: s / L }; });
+  const r = imd.metadata.resumen;
+  $("k-last").textContent = fmt(r.imd_ponderada_ultimo_ano); $("k-2026").textContent = fmt(r.imd_ponderada_2026); $("k-growth").textContent = "+" + r.crecimiento_pct.toFixed(1) + " %";
+  const heavy = st.reduce((s, e) => s + e.pct_pesados_last * e.longitud_km, 0) / st.reduce((s, e) => s + e.longitud_km, 0);
+  $("k-heavy").textContent = heavy.toFixed(1) + " %";
+
+  // serie
+  {
+    const svg = $("c-series"), W = 960, H = 300, m = { l: 56, r: 24, t: 16, b: 34 };
+    const pts = agg.concat([{ year: 2026, imd: r.imd_ponderada_2026, proj: true }]);
+    const x = (y) => m.l + ((y - 2010) / (2026 - 2010)) * (W - m.l - m.r);
+    const vmax = Math.ceil(Math.max(...pts.map((p) => p.imd)) / 2000) * 2000, vmin = 0;
+    const y = (v) => H - m.b - ((v - vmin) / (vmax - vmin)) * (H - m.t - m.b);
+    for (let v = 0; v <= vmax; v += 4000) { svg.appendChild(el("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: "#232329" })); svg.appendChild(el("text", { x: m.l - 8, y: y(v) + 4, "text-anchor": "end", "font-size": 11, fill: "#5b5b64" }, fmt(v))); }
+    for (const yr of [2010, 2014, 2018, 2022, 2026]) svg.appendChild(el("text", { x: x(yr), y: H - 10, "text-anchor": "middle", "font-size": 11, fill: "#5b5b64" }, yr));
+    const d = agg.map((p, i) => (i ? "L" : "M") + x(p.year) + " " + y(p.imd)).join(" ");
+    svg.appendChild(el("path", { d, fill: "none", stroke: "#e4e4e7", "stroke-width": 2 }));
+    const last = agg[agg.length - 1];
+    svg.appendChild(el("path", { d: `M${x(last.year)} ${y(last.imd)} L${x(2026)} ${y(r.imd_ponderada_2026)}`, fill: "none", stroke: "#9ecbff", "stroke-width": 2, "stroke-dasharray": "5 5" }));
+    for (const p of pts) svg.appendChild(el("circle", { cx: x(p.year), cy: y(p.imd), r: 3.5, fill: p.proj ? "#9ecbff" : (p.year === 2020 || p.year === 2021 ? "#e5c07b" : "#e4e4e7") }));
+    svg.appendChild(el("text", { x: x(2026), y: y(r.imd_ponderada_2026) - 10, "text-anchor": "middle", "font-size": 11, fill: "#9ecbff" }, fmt(r.imd_ponderada_2026)));
+    svg.appendChild(el("text", { x: x(2020.5), y: y(agg.find((p) => p.year === 2020).imd) + 22, "text-anchor": "middle", "font-size": 11, fill: "#e5c07b" }, "2020–21, weight 0.3"));
+  }
+  // estaciones
+  {
+    const svg = $("c-stations"), W = 960, H = 260, m = { l: 56, r: 16, t: 16, b: 40 };
+    const vmax = Math.ceil(Math.max(...st.map((e) => e.imd_2026)) / 5000) * 5000;
+    const y = (v) => H - m.b - (v / vmax) * (H - m.t - m.b);
+    const bw = (W - m.l - m.r) / st.length;
+    for (let v = 0; v <= vmax; v += 5000) { svg.appendChild(el("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: "#232329" })); svg.appendChild(el("text", { x: m.l - 8, y: y(v) + 4, "text-anchor": "end", "font-size": 11, fill: "#5b5b64" }, fmt(v))); }
+    st.forEach((e, i) => {
+      const x0 = m.l + i * bw + bw * 0.15;
+      svg.appendChild(el("rect", { x: x0, y: y(e.imd_2026), width: bw * 0.7, height: H - m.b - y(e.imd_2026), fill: "#2f3f52", stroke: "#9ecbff", "stroke-width": 1 }));
+      svg.appendChild(el("text", { x: x0 + bw * 0.35, y: y(e.imd_2026) - 6, "text-anchor": "middle", "font-size": 11, fill: "#e4e4e7" }, fmt(e.imd_2026)));
+      svg.appendChild(el("text", { x: x0 + bw * 0.35, y: H - 22, "text-anchor": "middle", "font-size": 11, fill: "#8b8b94" }, e.estac));
+      svg.appendChild(el("text", { x: x0 + bw * 0.35, y: H - 8, "text-anchor": "middle", "font-size": 10, fill: "#5b5b64" }, "km " + e.pk_inicial.toFixed(0) + "–" + e.pk_final.toFixed(0)));
+    });
+  }
+  // tabla
+  {
+    const tb = $("t-stations").querySelector("tbody");
+    for (const e of st) {
+      const tr = document.createElement("tr");
+      const cells = [e.estac, e.descripcion.toLowerCase().replace(/(^|[\s(])([a-záéíóúñ])/g, (m, a, b) => a + b.toUpperCase()), e.pk_inicial.toFixed(1) + "–" + e.pk_final.toFixed(1), fmt(e.imd_last), fmt(e.imd_2026), (e.growth_pct_to_2026 >= 0 ? "+" : "") + e.growth_pct_to_2026.toFixed(1) + " %", e.regression.r2.toFixed(2)];
+      cells.forEach((c, i) => { const td = document.createElement("td"); if (i >= 2) td.className = "n"; td.textContent = c; tr.appendChild(td); });
+      tb.appendChild(tr);
+    }
+  }
+
+  // ---- cobertura ----
+  const a = cov.agregado, d = cov.distribucion_rsrp_medio;
+  $("k-cov").textContent = a.pct_servida_m110.toFixed(1) + " %"; $("k-rsrp").textContent = cov.rsrp.media_sectores.toFixed(1);
+  $("k-sect").textContent = (d["[-95,-86)"] + d["[-86,0)"]); $("k-area").textContent = fmt(cov.metadata.area_con_servicio_km2);
+  {
+    const svg = $("c-cov"), W = 960, m = { l: 200, r: 90 };
+    const rows = [["≥ −86 dBm · excellent", a.area_m86, "#7fdc9c"], ["−95 to −86 · good", a.area_m95 - a.area_m86, "#9ecbff"], ["−110 to −95 · acceptable", a.area_m110 - a.area_m95, "#6b7f99"], ["< −110 · no service", a.area_m150 - a.area_m110, "#4a3a3a"]];
+    const total = a.area_m150, w = W - m.l - m.r;
+    rows.forEach((row, i) => {
+      const y0 = 14 + i * 38, bw = (row[1] / total) * w;
+      svg.appendChild(el("text", { x: m.l - 12, y: y0 + 16, "text-anchor": "end", "font-size": 12, fill: "#8b8b94" }, row[0]));
+      svg.appendChild(el("rect", { x: m.l, y: y0, width: Math.max(bw, 1), height: 24, rx: 3, fill: row[2] }));
+      svg.appendChild(el("text", { x: m.l + bw + 8, y: y0 + 16, "font-size": 12, fill: "#e4e4e7" }, row[1].toFixed(0) + " km² · " + ((row[1] / total) * 100).toFixed(1) + " %"));
+    });
+  }
+  {
+    const svg = $("c-sectors"), W = 960, H = 260, m = { l: 48, r: 16, t: 16, b: 30 };
+    const s = cov.sectores.slice().sort((p, q) => q.area_m110 - p.area_m110);
+    const vmax = Math.ceil(Math.max(...s.map((p) => p.area_m110)) / 10) * 10;
+    const y = (v) => H - m.b - (v / vmax) * (H - m.t - m.b);
+    const bw = (W - m.l - m.r) / s.length;
+    for (let v = 0; v <= vmax; v += 10) { svg.appendChild(el("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: "#232329" })); svg.appendChild(el("text", { x: m.l - 8, y: y(v) + 4, "text-anchor": "end", "font-size": 11, fill: "#5b5b64" }, v)); }
+    s.forEach((p, i) => {
+      const col = p.media >= -86 ? "#7fdc9c" : p.media >= -95 ? "#9ecbff" : "#6b7f99";
+      const rect = el("rect", { x: m.l + i * bw + 1, y: y(p.area_m110), width: bw - 2, height: H - m.b - y(p.area_m110), fill: col, opacity: 0.85 });
+      rect.appendChild(el("title", {}, `sector ${p.idx}: ${p.area_m110} km² above −110 dBm · mean RSRP ${p.media} dBm · p90 ${p.p90} dBm`));
+      svg.appendChild(rect);
+    });
+    svg.appendChild(el("text", { x: W - m.r, y: H - 10, "text-anchor": "end", "font-size": 11, fill: "#5b5b64" }, "km² · colour: mean RSRP of the sector (good ≥ −95, excellent ≥ −86)"));
+  }
+
+  // ---- vídeo bajo demanda ----
+  $("play").addEventListener("click", () => {
+    const f = document.createElement("iframe");
+    f.src = "https://www.youtube-nocookie.com/embed/AYSiCe6IK5g?rel=0&modestbranding=1&autoplay=1"; f.allow = "autoplay; encrypted-media; picture-in-picture"; f.allowFullscreen = true; f.title = "Demonstration";
+    $("video").replaceChildren(f);
+  });
+})();
+</script>
 </body>
 </html>

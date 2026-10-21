@@ -1,60 +1,62 @@
 # A connected vehicle on a private LTE network
 
-A small car as user equipment on a 4G network we built ourselves, with the driving decisions taken in the core and inference at the edge. Four machines: an EPC host running the LTE core and the control runtime, an eNodeB on a bladeRF SDR, a Jetson Orin Nano as inference node, and an AWS DeepRacer carrying the camera, LiDAR and IMU. Camera frames and telemetry go up over LTE, traffic-sign detections become steering and throttle commands, and the commands come back down the same path.
+A small car as user equipment on a 4G network built from scratch with software radio, traffic-sign detection with a model trained for it, driving decisions taken in the network core, and a plan to deploy the same service on 104 km of motorway: radio planning, traffic forecast, cost and licensing.
 
-Taller de Proyectos 2, Master's in Telecommunications Engineering, University of Valladolid, spring 2026. Team of three: Alonso Sandoval, Mario Medrano and Luis F. Sánchez. The original repository is [TallerProyectos2/TP2](https://github.com/TallerProyectos2/TP2); the project site, which I built, is at [tallerproyectos2.github.io/TP2](https://tallerproyectos2.github.io/TP2/).
+Taller de Proyectos 2, Master's in Telecommunications Engineering, University of Valladolid, 2025–2026. With Mario Medrano and Luis F. Sánchez. Project site: [asandova-ui.github.io/connected-vehicle-private-lte](https://asandova-ui.github.io/connected-vehicle-private-lte/).
 
 <p align="center">
   <img src="docs/assets/readme/demo.webp" width="640" alt="The demonstration">
 </p>
 
-## How it is split
+## Network
 
-| Machine | Role |
-| --- | --- |
-| EPC PC | LTE core (srsRAN 4G EPC), UE routing, the UDP control runtime, web operator UI, local inference fallback, session recording |
-| eNodeB PC | radio access only: `srsenb` on a bladeRF 2.0 xA9, band 7, 10 MHz FDD |
-| Vehicle | LTE UE, camera and sensor capture, command execution; no global decisions |
-| Jetson Orin Nano | inference-only offload endpoint |
+srsRAN 4G end to end. The EPC (MME, HSS, SPGW) runs on one machine at 10.10.10.1 and hands UEs addresses in 172.16.0.0/24; the eNodeB runs `srsenb` on a bladeRF 2.0 xA9 on a second machine, band 7, 10 MHz FDD, MIMO 2×2 TM4, S1-MME over SCTP and GTP-U over UDP to the core. The car attaches as a UE through an LTE modem. Measured from the UE with `ping` and `iperf3`: 38 ms mean ICMP latency, 15.0 Mbit/s up and 23.5 Mbit/s down over TCP, a 5 Mbit/s UDP stream with 0 % loss and 4.7 ms jitter.
 
-The control plane is one-directional. The car captures and obeys; the EPC orchestrates, decides and commands; the eNodeB moves radio; the Jetson answers inference requests. Every runtime decision is visible from the EPC, which is what makes the system auditable.
+## Vision
 
-## Runtime
+A traffic-sign detector trained on a dataset built for the project, 4,985 images and 10,962 annotations of the signs on the test track, 300 epochs on a YOLO backbone: mAP@50 95.5 %, precision 94.0 %, recall 91.6 %. Served behind a Roboflow-compatible inference endpoint on a Jetson Orin Nano, with a local fallback on the EPC. Sessions are recorded as annotated video plus a frame manifest so hard cases can be relabelled and the model retrained without touching the control path.
 
-1. The EPC brings up the core and routing; the eNodeB brings up the radio.
-2. The car attaches as UE and streams frames, battery, LiDAR scans and IMU telemetry over UDP to `servicios/coche.py`.
-3. Traffic signs are detected by a YOLO model behind a Roboflow-compatible inference server, on the EPC or on the Jetson.
-4. `servicios/autonomous_driver.py` turns detections into actions with a deterministic state machine: track signs over time, resolve ambiguous detections, apply cooldowns, fall back to neutral when frames or predictions go stale.
-5. Three safety layers adjust or override: OpenCV lane detection to hold the taped track, LiDAR obstacle protection that slows or stops the car, IMU-based speed estimation with a bounded PID on the throttle. Steering trim compensates known mechanical drift.
-6. A compact UDP packet goes back to the car. The browser UI shows live video, status, manual and autonomous modes, tuning and recording.
+## Control
 
-Sessions are recorded for replay, relabelling and retraining. `ops/` holds the startup, shutdown and validation scripts and the systemd units that make a four-machine start repeatable; `docs/logs/validations/` keeps the evidence for every runtime change.
+Everything that decides lives in the core, not in the car. `servicios/coche.py` receives camera frames, battery, IMU and LiDAR over UDP and answers with a compact steering/throttle packet.
 
-## From the lab to the A-601
+- A deterministic state machine turns detections into actions: 90° turns on confirmed signs with an area and persistence threshold, speed-limit signs set a throttle ramp for three seconds, STOP holds neutral for five, stale frames or predictions fall back to neutral.
+- OpenCV lane assistance on the taped track corrects steering, only on forward autonomous actions.
+- A bounded PID on the throttle from BMI160 IMU speed estimates.
+- LiDAR safety on a 45-beam front sector: stop under 0.15 m, throttle limited to 0.85 m, steering correction to 1.35 m. It overrides the camera; a stale LiDAR does not.
+- A browser console for live video, manual and autonomous modes, hot tuning of cruise throttle, trim, lane gain and LiDAR sectors, and session recording.
 
-The second half of the project is a deployment study for the Valladolid–Segovia corridor, km 0 to 104: traffic demand from the Ministry's IMD data projected to 2026, cell capacity, radio planning in Xirio with 25 sites and 44 sectors, mast placement, equipment sizing, cost model and the Spanish regulatory procedure for a band 7 deployment on spectrum ceded by Vodafone. The data and the dashboards are in `docs/`.
+`ops/` brings the four machines up and down with systemd units and validation scripts; `tests/` covers the decisions, lane detection, LiDAR processing and runtime behaviour.
+
+## Deployment on the A-601
+
+The second half of the work takes the service to the Valladolid–Segovia motorway, km 0 to 104, on 10 MHz of band 7 ceded by Vodafone under an academic contract (2540–2550 / 2660–2670 MHz).
+
+- **Traffic**: IMD series 2010–2024 from the nine Ministry counting stations on the stretch, projected to 2026 with a weighted least-squares fit (pandemic years at weight 0.3), aggregated by sub-section length. About 11,000 vehicles a day on the corridor.
+- **Radio planning**: COST-231 Hata with a rural correction fitted to the corridor, 25 sites (20 co-located on existing masts, 5 new), 50 sectors, simulated in Xirio-Online. 92.2 % of the served area above RSRP −110 dBm, mean sector RSRP −96.9 dBm, 44 of 50 sectors effective over the carriageway.
+- **Cost**: CAPEX (civil works, radio equipment, engineering, permits), recurring OPEX (co-location, power, maintenance) and the first-year total.
+- **Licensing**: Ley 11/2022, RD 123/2017, RD 1066/2001 on exposure limits, the procedure before SETID and registration with the CNMC.
+
+Data and dashboards are in `docs/`.
 
 <p align="center">
-  <img src="docs/assets/readme/site-lab.png" width="800" alt="Project site: the lab">
-</p>
-<p align="center">
-  <img src="docs/assets/readme/site-traffic-a601.png" width="395" alt="A-601 traffic dashboard" hspace="4">
-  <img src="docs/assets/readme/site-coverage-a601.png" width="395" alt="A-601 coverage validation" hspace="4">
+  <img src="docs/assets/readme/site-traffic-a601.png" width="395" alt="A-601 traffic" hspace="4">
+  <img src="docs/assets/readme/site-coverage-a601.png" width="395" alt="A-601 coverage" hspace="4">
 </p>
 
 ## Layout
 
 ```
-servicios/     Python runtime: car control, inference client, autonomous policy, lane and LiDAR logic, replayer
-ops/           bring-up, shutdown, validation, systemd units, sudoers templates
-docs/          architecture, per-machine runbooks, network contract, inference notes, reliability, the project site and the A-601 study data
+servicios/     runtime: car control, inference client, autonomous policy, lane and LiDAR logic, replayer
+ops/           bring-up, shutdown, validation, systemd units
+docs/          architecture, runbooks per machine, network contract, inference notes, the site and the A-601 data
 docs/logs/     validation evidence
-tests/         unit tests for the autonomous decisions, lane detection, LiDAR processing and runtime behaviour
-SoftARTEMIS/   vehicle-side support files
+tests/         unit tests
+SoftARTEMIS/   vehicle-side files
 ```
 
 ```bash
 PYTHONPATH=servicios python -m unittest discover -s tests
 ```
 
-Python, NumPy, OpenCV; srsRAN 4G; bladeRF; Roboflow Inference with a YOLO model; a Jetson Orin Nano; systemd, Bash and SSH for orchestration. The lab itself is physical, so there is no one-command demo; secrets and machine-local settings live outside the repository.
+Python, NumPy, OpenCV; srsRAN 4G on bladeRF; Roboflow Inference on a Jetson Orin Nano; Xirio-Online for the radio study; systemd, Bash and SSH for the lab. The lab is physical, so there is no one-command demo.
