@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+log() {
+  printf '[tp2-mqtt] %s\n' "$*"
+}
+
+warn() {
+  printf '[tp2-mqtt][warn] %s\n' "$*" >&2
+}
+
+die() {
+  printf '[tp2-mqtt][error] %s\n' "$*" >&2
+  exit 1
+}
+
+require_binary() {
+  command -v "$1" >/dev/null 2>&1 || die "$1 is required"
+}
+
+: "${TP2_PUBLISH_CAR_MODE_ON_UP:=1}"
+: "${TP2_MQTT_CLEAR_RETAINED_ON_UP:=0}"
+: "${TP2_MQTT_RETAIN_COMMAND:=1}"
+: "${TP2_MQTT_VERIFY_RETAINED:=1}"
+: "${TP2_MQTT_FAIL_ON_CONFLICT:=0}"
+: "${TP2_MQTT_HOST:=172.16.0.1}"
+: "${TP2_MQTT_PORT:=1883}"
+: "${TP2_MQTT_QOS:=1}"
+: "${TP2_MQTT_COMMAND_TOPIC:=1/command}"
+: "${TP2_MQTT_COMMAND_PAYLOAD:=AM-Cloud}"
+: "${TP2_MQTT_SUB_TIMEOUT_SEC:=2}"
+: "${TP2_MQTT_CLIENT_ID_PREFIX:=tp2-g4-car-mode}"
+: "${TP2_MQTT_LOCK_DIR:=/tmp/tp2-mqtt-car-mode.lock}"
+: "${TP2_MQTT_LOCK_TIMEOUT_SEC:=10}"
+
+require_binary mosquitto_pub
+require_binary mosquitto_sub
+
+acquire_lock() {
+  local deadline=$((SECONDS + TP2_MQTT_LOCK_TIMEOUT_SEC))
+
+  while ! mkdir "${TP2_MQTT_LOCK_DIR}" 2>/dev/null; do
+    if (( SECONDS >= deadline )); then
+      die "could not acquire MQTT state lock ${TP2_MQTT_LOCK_DIR}"
+    fi
+    sleep 0.2
+  done
+
+  trap 'rmdir "${TP2_MQTT_LOCK_DIR}" 2>/dev/null || true' EXIT
+}
+
+read_retained_payload() {
+  local output_file
+  local error_file
+  local status
+  output_file="$(mktemp)"
+  error_file="$(mktemp)"
+
+  set +e
+  mosquitto_sub \
+    -h "${TP2_MQTT_HOST}" \
+    -p "${TP2_MQTT_PORT}" \
+    -q "${TP2_MQTT_QOS}" \
+    -i "${TP2_MQTT_CLIENT_ID_PREFIX}-check-$$" \
+    -t "${TP2_MQTT_COMMAND_TOPIC}" \
+    --retained-only \
+    -W "${TP2_MQTT_SUB_TIMEOUT_SEC}" \
+    -C 1 \
+    >"${output_file}" 2>"${error_file}"
+  status=$?
+  set -e
+
+  if [[ "${status}" == "0" ]]; then
+    head -n 1 "${output_file}"
+    rm -f "${output_file}" "${error_file}"
+    return 0
+  fi
+
+  local error_text
+  error_text="$(tr '\n' ' ' <"${error_file}" | sed 's/[[:space:]]*$//')"
+  rm -f "${output_file}" "${error_file}"
+
+  if [[ "${error_text}" == *"Timed out"* || "${error_text}" == *"timed out"* ]]; then
+    return 2
+  fi
+
+  die "could not read retained payload from ${TP2_MQTT_HOST}:${TP2_MQTT_PORT}/${TP2_MQTT_COMMAND_TOPIC}: ${error_text:-mosquitto_sub exited ${status}}"
+}
+
+clear_retained_payload() {
+  mosquitto_pub \
+    -h "${TP2_MQTT_HOST}" \
+    -p "${TP2_MQTT_PORT}" \
+    -q "${TP2_MQTT_QOS}" \
+    -i "${TP2_MQTT_CLIENT_ID_PREFIX}-clear-$$" \
+    -t "${TP2_MQTT_COMMAND_TOPIC}" \
+    -r \
+    -n
+}
+
+publish_payload() {
+  local args=(
+    -h "${TP2_MQTT_HOST}"
+    -p "${TP2_MQTT_PORT}"
+    -q "${TP2_MQTT_QOS}"
+    -i "${TP2_MQTT_CLIENT_ID_PREFIX}-publish-$$"
+    -t "${TP2_MQTT_COMMAND_TOPIC}"
+  )
+
+  if [[ "${TP2_MQTT_RETAIN_COMMAND}" == "1" ]]; then
+    args+=(-r)
+  fi
+
+  mosquitto_pub "${args[@]}" -m "${TP2_MQTT_COMMAND_PAYLOAD}"
+}
+
+if [[ "${TP2_PUBLISH_CAR_MODE_ON_UP}" != "1" ]]; then
+  log "publish disabled by TP2_PUBLISH_CAR_MODE_ON_UP=0"
+  exit 0
+fi
+
+acquire_lock
+
+retained=""
+retained_present=0
+if retained="$(read_retained_payload)"; then
+  retained_present=1
+else
+  status=$?
+  if [[ "${status}" != "2" ]]; then
+    exit "${status}"
+  fi
+fi
+
+if [[ "${TP2_MQTT_CLEAR_RETAINED_ON_UP}" == "1" && "${retained_present}" == "1" ]]; then
+  warn "clearing retained payload before publishing because TP2_MQTT_CLEAR_RETAINED_ON_UP=1"
+  clear_retained_payload
+  retained=""
+  retained_present=0
+fi
+
+if [[ "${retained_present}" == "1" && "${retained}" == "${TP2_MQTT_COMMAND_PAYLOAD}" ]]; then
+  log "${TP2_MQTT_COMMAND_TOPIC}: retained state already '${TP2_MQTT_COMMAND_PAYLOAD}', skipping publish"
+  exit 0
+fi
+
+if [[ "${retained_present}" == "1" && "${retained}" != "${TP2_MQTT_COMMAND_PAYLOAD}" ]]; then
+  if [[ "${TP2_MQTT_FAIL_ON_CONFLICT}" == "1" ]]; then
+    die "${TP2_MQTT_COMMAND_TOPIC}: retained payload '${retained}' differs from desired '${TP2_MQTT_COMMAND_PAYLOAD}'"
+  fi
+  warn "${TP2_MQTT_COMMAND_TOPIC}: retained payload '${retained}' differs from desired '${TP2_MQTT_COMMAND_PAYLOAD}', replacing it"
+else
+  log "${TP2_MQTT_COMMAND_TOPIC}: no retained state found, publishing desired state"
+fi
+
+publish_payload
+
+if [[ "${TP2_MQTT_RETAIN_COMMAND}" == "1" && "${TP2_MQTT_VERIFY_RETAINED}" == "1" ]]; then
+  verified=""
+  if ! verified="$(read_retained_payload)"; then
+    die "${TP2_MQTT_COMMAND_TOPIC}: could not verify retained payload after publish"
+  fi
+  if [[ "${verified}" != "${TP2_MQTT_COMMAND_PAYLOAD}" ]]; then
+    die "${TP2_MQTT_COMMAND_TOPIC}: retained payload after publish is '${verified}', expected '${TP2_MQTT_COMMAND_PAYLOAD}'"
+  fi
+  log "${TP2_MQTT_COMMAND_TOPIC}: retained state verified as '${verified}'"
+else
+  log "${TP2_MQTT_COMMAND_TOPIC}: published '${TP2_MQTT_COMMAND_PAYLOAD}'"
+fi

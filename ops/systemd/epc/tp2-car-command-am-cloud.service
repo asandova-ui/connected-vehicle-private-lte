@@ -1,0 +1,22 @@
+[Unit]
+Description=TP2 ensure retained AM-Cloud mode on the car command topic
+After=mosquitto.service
+Requires=mosquitto.service
+
+[Service]
+Type=oneshot
+User=tp2
+WorkingDirectory=/home/tp2/TP2_red4G
+Environment=TP2_MQTT_HOST=172.16.0.1
+Environment=TP2_MQTT_PORT=1883
+Environment=TP2_MQTT_QOS=1
+Environment=TP2_MQTT_COMMAND_TOPIC=1/command
+Environment=TP2_MQTT_COMMAND_PAYLOAD=AM-Cloud
+Environment=TP2_MQTT_RETAIN_COMMAND=1
+Environment=TP2_MQTT_VERIFY_RETAINED=1
+Environment=TP2_MQTT_FAIL_ON_CONFLICT=0
+Environment=TP2_MQTT_CLIENT_ID_PREFIX=tp2-g4-car-mode
+Environment=TP2_MQTT_LOCK_DIR=/tmp/tp2-mqtt-car-mode.lock
+Environment=TP2_MQTT_LOCK_TIMEOUT_SEC=10
+EnvironmentFile=-/etc/tp2/car-command.env
+ExecStart=/home/tp2/TP2_red4G/ops/bin/tp2-mqtt-ensure-car-mode

@@ -1,0 +1,132 @@
+# TP2 Machine Inventory
+
+## Purpose
+
+Record current machine roles, addressing, and access paths for the live lab.
+
+Do not store passwords here.
+
+## PC EPC
+
+- Role:
+  - LTE core host
+  - main script runtime host
+- Hostname:
+  - `tp2-EPC`
+- Services:
+  - `srsepc`
+  - NAT / IP forwarding
+  - optional `dnsmasq`
+  - control scripts from `servicios/`
+  - local inference endpoint from `servicios/`
+  - autonomous driving policy from `servicios/autonomous_driver.py`
+  - lane stabilization from `servicios/lane_detector.py`
+  - LiDAR collision assistance from `servicios/lidar_processor.py`
+  - BMI160 IMU speed assistance inside `servicios/coche.py`
+  - dataset/session recorder from `servicios/coche.py`
+- Known addresses:
+  - upstream (`eno1`): `10.0.128.174/24` (DHCP)
+  - backhaul (`enp1s0`): `10.10.10.1/24`
+  - Tailscale: `100.97.19.112`
+  - SGi (`srs_spgw_sgi`): `172.16.0.1/24`
+- Script runtime references:
+  - repository path: `servicios/`
+  - deployed path used in recent validations: `/home/tp2/TP2_red4G/servicios/`
+- Access path:
+  - primary remote entrypoint from the operator MacBook
+  - direct Tailscale SSH: `ssh tp2@100.97.19.112`
+- Operator automation path:
+  - run `ops/bin/tp2-*` from `/home/tp2/TP2_red4G` on the EPC
+  - EPC-targeted operations use `TP2_EPC_SSH=local`
+- Autostart references:
+  - `ops/systemd/epc/tp2-srsepc.service`
+  - `ops/systemd/epc/tp2-local-inference.service`
+  - `ops/systemd/epc/tp2-car-control.service`
+  - `ops/systemd/epc/tp2-car-command-am-cloud.service`
+  - `ops/sudoers/epc/tp2-lab` for narrow passwordless TP2 service control
+  - live operator view: `http://100.97.19.112:8088/`
+
+## PC eNodeB
+
+- Role:
+  - LTE radio access
+- Hostname:
+  - `tp2-ENB`
+- Services:
+  - `srsenb`
+  - `bladeRF`
+- Radio configuration:
+  - `/home/tp2/.config/srsran/enb.conf`
+  - Current eNodeB MIMO setting: LTE TM4 with `nof_ports = 2` for 2x2 MIMO on `bladeRF` (`2026-04-30`)
+- Known addresses:
+  - EPC-side SSH/access IP: `10.10.10.2`
+  - backhaul: `10.10.10.2`
+  - Tailscale: `100.69.186.34`
+- Access path:
+  - operator path from a MacBook: `ssh -J tp2@100.97.19.112 tp2@10.10.10.2`
+  - fallback operator path: SSH to `tp2@100.97.19.112` on EPC, then SSH from EPC to `tp2@10.10.10.2`
+  - `tp2@EPC -> tp2@eNodeB` key-based SSH hop validated (`2026-03-04`)
+- Operator automation path:
+  - from EPC, use `TP2_ENB_SSH=tp2@10.10.10.2`
+- Autostart references:
+  - `ops/systemd/enb/tp2-enb-link.service` runs `/home/tp2/to_epc_link.sh` at eNodeB boot
+  - `ops/systemd/enb/tp2-bladerf-fpga.service`
+  - `ops/systemd/enb/tp2-srsenb.service`
+  - `ops/sudoers/enb/tp2-lab` for narrow passwordless TP2 service control
+
+## Jetson
+
+- Role:
+  - inference-only node
+- Hostname:
+  - `tp2-jetson`
+- SSH user:
+  - `grupo4`
+- Target use:
+  - offload inference from EPC when required
+  - keep control path anchored on EPC
+  - last validated HTTP endpoint from EPC: `http://100.115.99.8:9001`
+- Runbook:
+  - `docs/JETSON.md`
+- Addressing:
+  - management LAN IP: `192.168.72.127`
+  - Tailscale IP: `100.115.99.8`
+  - must be reachable from EPC
+- Access path:
+  - primary operator path from a MacBook: `ssh grupo4@100.115.99.8`
+  - direct SSH by hostname when available: `ssh grupo4@tp2-jetson`
+  - management LAN SSH: `ssh grupo4@192.168.72.127`
+- Autostart references:
+  - `ops/systemd/jetson/tp2-roboflow-inference.service`
+
+## Coche
+
+- Role:
+  - mobile client
+- Services:
+  - sends sensor payloads to EPC control scripts
+  - sends LiDAR scans to EPC when the LiDAR sensor is connected
+  - sends BMI160 IMU telemetry to EPC as UDP `D` JSON when the sensor is available
+  - executes steering/throttle commands from EPC
+- Connectivity:
+  - attaches as LTE UE
+  - receives address from EPC UE pool `172.16.0.0/24`
+  - observed IMSI: `901650000052126`
+  - previous static UE target: `901650000052126 -> 172.16.0.2`
+  - live note (`2026-04-27`): EPC HSS currently has `IP_alloc=dynamic`; latest observed UE IP was `172.16.0.4`
+- Control transport:
+  - UDP payload stream to EPC control scripts
+  - UDP control packets returned by EPC
+  - autonomous decisions are computed on EPC; the car only executes received steering/throttle commands
+- Autostart note:
+  - car-side runtime is started manually by operators
+  - EPC automation checks the car UE best-effort before ensuring retained `AM-Cloud`, but does not block by default
+  - MQTT retained state is idempotent: if `1/command` already retains `AM-Cloud`, automation does not publish it again
+  - EPC automation does not restart the car-side service unless `TP2_RESTART_CAR_ON_UP=1` is explicitly configured
+
+## Ownership Rules
+
+- EPC owns orchestration and control runtime.
+- eNodeB owns radio only.
+- Jetson owns inference only when explicitly selected by EPC configuration.
+- Car owns capture/sensor emission and command execution only.
